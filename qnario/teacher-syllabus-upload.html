@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Syllabus Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Upload your syllabus, let AI scan it, set paper pattern and generate exam questions automatically.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:#0a0e27;color:#fff;overflow-x:hidden;min-height:100vh;}
+
+        /* BG */
+        .bg-wrapper{position:fixed;inset:0;z-index:-1;overflow:hidden;}
+        .gradient-mesh{position:absolute;width:200%;height:200%;background:radial-gradient(circle at 20% 30%,#667eea 0%,transparent 40%),radial-gradient(circle at 80% 70%,#764ba2 0%,transparent 40%),radial-gradient(circle at 50% 50%,#4facfe 0%,transparent 40%);animation:moveMesh 20s infinite alternate ease-in-out;filter:blur(120px);opacity:0.6;}
+        .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;}
+        @keyframes moveMesh{0%{transform:translate(-10%,-10%)}100%{transform:translate(10%,10%)}}
+
+        /* TOPBAR */
+        .topbar{position:fixed;width:100%;height:70px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(20px);background:rgba(0,0,0,0.35);z-index:100;border-bottom:1px solid rgba(255,255,255,0.06);}
+        .logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;text-decoration:none;background:linear-gradient(135deg,#667eea,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .back-btn{padding:8px 18px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-weight:600;cursor:pointer;text-decoration:none;font-size:0.9rem;transition:0.2s;}
+        .back-btn:hover{background:rgba(255,255,255,0.12);}
+
+        /* LAYOUT */
+        .page{padding:90px 40px 60px;max-width:1100px;margin:0 auto;}
+
+        /* PAGE HEADER */
+        .page-header{text-align:center;margin-bottom:40px;}
+        .page-header h1{font-family:'Space Grotesk',sans-serif;font-size:2.4rem;font-weight:800;background:linear-gradient(135deg,#a78bfa,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
+        .page-header p{color:rgba(255,255,255,0.6);font-size:1rem;}
+
+        /* STEPPER */
+        .stepper{display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:50px;}
+        .step{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
+        .step-circle{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;transition:0.3s;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);}
+        .step.active .step-circle{background:linear-gradient(135deg,#667eea,#4facfe);border-color:transparent;color:#fff;box-shadow:0 0 20px rgba(102,126,234,0.5);}
+        .step.done .step-circle{background:linear-gradient(135deg,#10b981,#34d399);border-color:transparent;color:#fff;}
+        .step-label{font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.5px;white-space:nowrap;}
+        .step.active .step-label,.step.done .step-label{color:rgba(255,255,255,0.8);}
+        .step-line{width:80px;height:2px;background:rgba(255,255,255,0.1);margin:0 6px;margin-bottom:22px;transition:0.3s;}
+        .step-line.done{background:linear-gradient(90deg,#10b981,#34d399);}
+
+        /* PANELS */
+        .panel{display:none;animation:fadeIn 0.4s ease;}
+        .panel.active{display:block;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+        /* GLASS CARD */
+        .glass{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:36px;}
+
+        /* UPLOAD ZONE */
+        .upload-zone{border:2px dashed rgba(102,126,234,0.5);border-radius:16px;padding:60px 40px;text-align:center;cursor:pointer;transition:0.3s;background:rgba(102,126,234,0.05);}
+        .upload-zone:hover,.upload-zone.drag-over{border-color:#667eea;background:rgba(102,126,234,0.12);}
+        .upload-zone .icon{font-size:3rem;margin-bottom:16px;}
+        .upload-zone h3{font-size:1.2rem;font-weight:700;margin-bottom:8px;}
+        .upload-zone p{color:rgba(255,255,255,0.5);font-size:0.9rem;}
+        .upload-zone small{display:block;margin-top:10px;color:rgba(255,255,255,0.35);font-size:0.78rem;}
+        #fileInput{display:none;}
+
+        /* META FIELDS */
+        .meta-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px;}
+        .field label{display:block;font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:6px;letter-spacing:0.5px;}
+        .field input,.field select{width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);color:#fff;font-size:0.95rem;outline:none;transition:0.2s;}
+        .field input:focus,.field select:focus{border-color:#667eea;background:rgba(102,126,234,0.1);}
+        .field select option,
+        .section-row select option{background:#1a1f3e;color:#fff;}
+
+        /* FILE PREVIEW */
+        .file-preview{display:none;align-items:center;gap:14px;margin-top:20px;padding:16px 20px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);}
+        .file-preview.show{display:flex;}
+        .file-preview-icon{font-size:1.8rem;}
+        .file-preview-info{flex:1;}
+        .file-preview-name{font-weight:600;font-size:0.95rem;}
+        .file-preview-size{font-size:0.8rem;color:rgba(255,255,255,0.5);}
+        .file-remove{background:none;border:none;color:rgba(255,0,0,0.7);cursor:pointer;font-size:1.2rem;}
+
+        /* BUTTONS */
+        .btn{padding:12px 28px;border-radius:10px;border:none;font-weight:700;font-size:0.95rem;cursor:pointer;transition:0.25s;display:inline-flex;align-items:center;gap:8px;}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#4facfe);color:#fff;}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(102,126,234,0.4);}
+        .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+        .btn-secondary{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);}
+        .btn-secondary:hover{background:rgba(255,255,255,0.14);}
+        .btn-success{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;}
+        .btn-success:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.4);}
+        .btn-danger{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);}
+        .btn-sm{padding:7px 16px;font-size:0.82rem;}
+        .btn-row{display:flex;gap:12px;justify-content:flex-end;margin-top:30px;}
+
+        /* SCANNING OVERLAY */
+        .scanning-box{text-align:center;padding:50px 30px;}
+        .scanning-box .spinner{width:60px;height:60px;border:4px solid rgba(102,126,234,0.2);border-top:4px solid #667eea;border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 20px;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .scanning-box h3{font-size:1.3rem;font-weight:700;margin-bottom:8px;}
+        .scanning-box p{color:rgba(255,255,255,0.5);}
+
+        /* SYLLABUS TREE */
+        .section-title{font-size:0.75rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:16px;margin-top:28px;}
+        .unit-block{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:16px;overflow:hidden;}
+        .unit-header{padding:14px 20px;font-weight:700;font-size:1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(102,126,234,0.1);}
+        .unit-header:hover{background:rgba(102,126,234,0.18);}
+        .unit-body{padding:16px 20px;display:none;}
+        .unit-body.open{display:block;}
+        .chapter-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 14px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,0.04);}
+        .chapter-name{font-weight:600;font-size:0.9rem;color:#4facfe;margin-bottom:4px;}
+        .topic-pill{display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(102,126,234,0.15);border:1px solid rgba(102,126,234,0.3);font-size:0.75rem;color:rgba(255,255,255,0.7);margin:2px;}
+
+        /* PAPER PATTERN FORM */
+        .pattern-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+        .section-builder{margin-top:24px;}
+        .section-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;margin-bottom:8px;}
+        .section-row input,.section-row select{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);color:#fff;font-size:0.85rem;outline:none;width:100%;}
+
+        /* QUESTIONS REVIEW */
+        .q-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:22px 24px;margin-bottom:16px;transition:0.2s;}
+        .q-card:hover{border-color:rgba(102,126,234,0.4);}
+        .q-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+        .q-badge{padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;}
+        .badge-chapter{background:rgba(167,139,250,0.18);color:#c4b5fd;border:1px solid rgba(167,139,250,0.3);}
+        .badge-type{background:rgba(79,172,254,0.15);color:#7dd3fc;border:1px solid rgba(79,172,254,0.3);}
+        .badge-diff-easy{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);}
+        .badge-diff-medium{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.25);}
+        .badge-diff-hard{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);}
+        .badge-marks{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);}
+        .q-text{font-size:1rem;font-weight:600;line-height:1.5;margin-bottom:14px;}
+        .q-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+        .q-option{padding:8px 14px;border-radius:8px;font-size:0.87rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);}
+        .q-option.correct{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#6ee7b7;}
+        .q-actions{display:flex;gap:8px;flex-wrap:wrap;}
+        .q-edit-form{display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);}
+        .q-edit-form textarea{width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:0.9rem;outline:none;resize:vertical;min-height:80px;}
+        .q-edit-form.open{display:block;}
+
+        /* STATS BAR */
+        .stats-bar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:30px;}
+        .stat-item{flex:1;min-width:100px;background:rgba(255,255,255,0.05);border-radius:12px;padding:16px 20px;text-align:center;border:1px solid rgba(255,255,255,0.08);}
+        .stat-num{font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,#a78bfa,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .stat-label{font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:4px;}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:30px;right:30px;padding:14px 22px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:999;display:none;animation:slideIn 0.3s ease;}
+        .toast.show{display:block;}
+        .toast.success{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;}
+        .toast.error{background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;}
+        @keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+        @media(max-width:700px){.meta-fields,.pattern-grid{grid-template-columns:1fr;}.q-options{grid-template-columns:1fr;}.stepper{gap:0;}.step-line{width:30px;}.page{padding:90px 16px 40px;}}
+    </style>
+</head>
+<body>
+
+<div class="bg-wrapper">
+    <div class="gradient-mesh"></div>
+    <div class="grid-overlay"></div>
+</div>
+
+<div class="topbar">
+    <a href="index.html" class="logo">QNARIO</a>
+    <a href="teacher-dashboard.html" class="back-btn">← Dashboard</a>
+</div>
+
+<div class="page">
+
+    <div class="page-header">
+        <h1>📄 Syllabus Scanner</h1>
+        <p>Upload your syllabus → AI reads it → Set paper pattern → Get questions generated instantly</p>
+    </div>
+
+    <!-- STEPPER -->
+    <div class="stepper">
+        <div class="step active" id="s1"><div class="step-circle">1</div><div class="step-label">UPLOAD</div></div>
+        <div class="step-line" id="line1"></div>
+        <div class="step" id="s2"><div class="step-circle">2</div><div class="step-label">REVIEW</div></div>
+        <div class="step-line" id="line2"></div>
+        <div class="step" id="s3"><div class="step-circle">3</div><div class="step-label">PATTERN</div></div>
+        <div class="step-line" id="line3"></div>
+        <div class="step" id="s4"><div class="step-circle">4</div><div class="step-label">QUESTIONS</div></div>
+    </div>
+
+    <!-- ===== STEP 1: UPLOAD ===== -->
+    <div class="panel active" id="panel1">
+        <div class="glass">
+            <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">Upload Your Syllabus</h2>
+            <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:24px;">Supported: PDF, JPG, PNG, DOCX — Max 10MB</p>
+
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">📂</div>
+                <h3>Drag & Drop or Click to Upload</h3>
+                <p>PDF, Images (JPG/PNG) or Word Document</p>
+                <small>Your file will be processed by Groq AI to extract topics</small>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.docx">
+
+            <div class="file-preview" id="filePreview">
+                <div class="file-preview-icon" id="previewIcon">📄</div>
+                <div class="file-preview-info">
+                    <div class="file-preview-name" id="previewName"></div>
+                    <div class="file-preview-size" id="previewSize"></div>
+                </div>
+                <button class="file-remove" onclick="removeFile()" title="Remove">✕</button>
+            </div>
+
+            <div class="meta-fields">
+                <div class="field">
+                    <label>SUBJECT</label>
+                    <input type="text" id="subjectInput" placeholder="e.g. Physics, Mathematics...">
+                </div>
+                <div class="field">
+                    <label>CLASS / STANDARD</label>
+                    <input type="text" id="classInput" placeholder="e.g. Class 11, B.Sc Sem 2...">
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" id="uploadBtn" onclick="uploadSyllabus()" disabled>
+                    <span>🔍</span> Scan Syllabus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STEP 2: REVIEW ===== -->
+    <div class="panel" id="panel2">
+        <!-- Scanning state -->
+        <div class="glass scanning-box" id="scanningBox">
+            <div class="spinner"></div>
+            <h3>AI is Scanning Your Syllabus...</h3>
+            <p>Groq is extracting units, chapters & topics. This takes 10–20 seconds.</p>
+        </div>
+
+        <!-- Review state -->
+        <div class="glass" id="reviewBox" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+                <div>
+                    <h2 style="font-size:1.3rem;font-weight:700;">Extracted Syllabus</h2>
+                    <p style="color:rgba(255,255,255,0.5);font-size:0.88rem;margin-top:4px;">Review and confirm the topics extracted by AI</p>
+                </div>
+                <span id="unitCountBadge" style="padding:6px 16px;border-radius:20px;background:rgba(102,126,234,0.2);border:1px solid rgba(102,126,234,0.4);font-size:0.85rem;font-weight:600;color:#a78bfa;"></span>
+            </div>
+
+            <div class="section-title">EXTRACTED TOPICS</div>
+            <div id="syllabusTree"></div>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="goStep(1)">← Re-upload</button>
+                <button class="btn btn-success" onclick="goStep(3)">✅ Confirm & Set Pattern →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STEP 3: PAPER PATTERN ===== -->
+    <div class="panel" id="panel3">
+        <div class="glass">
+            <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">Set Paper Pattern</h2>
+            <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:28px;">Define how your exam paper should be structured</p>
+
+            <div class="pattern-grid">
+                <div class="field">
+                    <label>PAPER TYPE</label>
+                    <select id="paperType">
+                        <option value="Mixed">Mixed (MCQ + Descriptive)</option>
+                        <option value="MCQ">MCQ Only</option>
+                        <option value="Descriptive">Descriptive Only</option>
+                        <option value="Short">Short Answer Only</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>TOTAL MARKS</label>
+                    <input type="number" id="totalMarks" value="100" min="10" max="500">
+                </div>
+                <div class="field">
+                    <label>DIFFICULTY</label>
+                    <select id="difficultyLevel">
+                        <option value="Mix">Mix (Easy + Medium + Hard)</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>EXAM DURATION (minutes)</label>
+                    <input type="number" id="duration" value="180" min="30" max="360">
+                </div>
+                <div class="field">
+                    <label>BLOOM'S TAXONOMY LEVEL</label>
+                    <select id="bloomsLevel">
+                        <option value="Mixed">Mixed (All Levels)</option>
+                        <option value="Remember">Remember</option>
+                        <option value="Understand">Understand</option>
+                        <option value="Apply">Apply</option>
+                        <option value="Analyze">Analyze</option>
+                        <option value="Evaluate">Evaluate</option>
+                        <option value="Create">Create</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>LANGUAGE</label>
+                    <select id="language">
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Bilingual">Bilingual (English + Hindi)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- SECTIONS -->
+            <div class="section-builder">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div class="section-title" style="margin:0;">SECTIONS</div>
+                    <button class="btn btn-secondary btn-sm" onclick="addSection()">+ Add Section</button>
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;padding:0 16px;margin-bottom:6px;">
+                    <small style="color:rgba(255,255,255,0.4);font-size:0.72rem;font-weight:600;letter-spacing:0.5px;">SECTION NAME</small>
+                    <small style="color:rgba(255,255,255,0.4);font-size:0.72rem;font-weight:600;letter-spacing:0.5px;">Q. TYPE</small>
+                    <small style="color:rgba(255,255,255,0.4);font-size:0.72rem;font-weight:600;letter-spacing:0.5px;">NO. OF Q's</small>
+                    <small style="color:rgba(255,255,255,0.4);font-size:0.72rem;font-weight:600;letter-spacing:0.5px;">MARKS EACH</small>
+                    <small></small>
+                </div>
+                <div id="sectionsContainer">
+                    <!-- default sections added via JS -->
+                </div>
+            </div>
+
+            <!-- CHAPTER SELECTION -->
+            <div style="margin-top:28px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div class="section-title" style="margin:0;">SELECT CHAPTERS TO INCLUDE</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllChapters()">All</button>
+                        <button class="btn btn-secondary btn-sm" onclick="clearChapters()">None</button>
+                    </div>
+                </div>
+                <div id="chapterCheckboxes" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="goStep(2)">← Back</button>
+                <button class="btn btn-primary" onclick="generateQuestions()" id="genBtn">
+                    <span>🤖</span> Generate Questions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STEP 4: QUESTIONS REVIEW ===== -->
+    <div class="panel" id="panel4">
+        <div class="glass scanning-box" id="generatingBox">
+            <div class="spinner" style="border-top-color:#a78bfa;"></div>
+            <h3>Generating Questions...</h3>
+            <p>Groq AI is creating questions based on your syllabus & pattern. Please wait.</p>
+        </div>
+
+        <div id="questionsBox" style="display:none;">
+            <div class="stats-bar" id="statsBar"></div>
+
+            <div class="glass" style="margin-bottom:20px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h2 style="font-size:1.2rem;font-weight:700;">Generated Questions</h2>
+                    <p style="color:rgba(255,255,255,0.5);font-size:0.87rem;margin-top:2px;">Review, edit or regenerate before finalising</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="goStep(3)">← Change Pattern</button>
+                    <button class="btn btn-primary btn-sm" onclick="generateQuestions()">🔄 Regenerate All</button>
+                    <button class="btn btn-success" onclick="finalisePaper()">✅ Finalise Paper</button>
+                </div>
+            </div>
+
+            <div id="questionsList"></div>
+        </div>
+    </div>
+
+</div><!-- /page -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let currentStep = 1;
+let selectedFile = null;
+let syllabusId = null;
+let extractedData = null;
+let paperId = null;
+let questions = [];
+let sections = [
+    { name:'Section A', type:'MCQ', count:20, marksEach:1 },
+    { name:'Section B', type:'Short', count:10, marksEach:3 },
+    { name:'Section C', type:'Long', count:5, marksEach:7 }
+];
+
+const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+if (!user || user.role !== 'teacher') window.location.href = 'teacher-login.html';
+
+// ──────────────────────────────────────────────
+// FILE UPLOAD
+// ──────────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+    const allowed = ['application/pdf','image/jpeg','image/png','image/jpg',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(file.type)) { showToast('Only PDF, JPG, PNG, DOCX allowed', 'error'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('File too large (max 10MB)', 'error'); return; }
+    selectedFile = file;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = (file.size/1024).toFixed(1) + ' KB';
+    document.getElementById('previewIcon').textContent = file.type.includes('image') ? '🖼️' :
+        file.type.includes('pdf') ? '📕' : '📝';
+    document.getElementById('filePreview').classList.add('show');
+    document.getElementById('uploadBtn').disabled = false;
+}
+
+function removeFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('filePreview').classList.remove('show');
+    document.getElementById('uploadBtn').disabled = true;
+}
+
+// ──────────────────────────────────────────────
+// STEP 1 → UPLOAD
+// ──────────────────────────────────────────────
+async function uploadSyllabus() {
+    if (!selectedFile) { showToast('Please select a file first', 'error'); return; }
+    const subject = document.getElementById('subjectInput').value.trim();
+    const className = document.getElementById('classInput').value.trim();
+
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> Uploading...';
+
+    const formData = new FormData();
+    formData.append('syllabusFile', selectedFile);
+    formData.append('teacherEmail', user.email);
+    formData.append('subject', subject || 'General');
+    formData.append('className', className || 'N/A');
+
+    goStep(2); // show scanning UI
+
+    try {
+        const resp = await fetch('/api/syllabus/upload', { method:'POST', body: formData });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error || 'Upload failed');
+
+        syllabusId = data.syllabusId;
+        extractedData = data.extracted;
+        renderSyllabusTree(extractedData);
+        renderChapterCheckboxes(extractedData);
+
+        document.getElementById('scanningBox').style.display = 'none';
+        document.getElementById('reviewBox').style.display = 'block';
+        document.getElementById('unitCountBadge').textContent = `${(extractedData.units||[]).length} Units Found`;
+        showToast('Syllabus scanned successfully!', 'success');
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        goStep(1);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔍</span> Scan Syllabus';
+    }
+}
+
+// ──────────────────────────────────────────────
+// SYLLABUS TREE RENDER
+// ──────────────────────────────────────────────
+function renderSyllabusTree(data) {
+    const tree = document.getElementById('syllabusTree');
+    const units = data.units || [];
+    if (!units.length) { tree.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;padding:30px;">No topics extracted. Please try re-uploading or edit manually.</p>'; return; }
+    tree.innerHTML = units.map((u, ui) => `
+        <div class="unit-block">
+            <div class="unit-header" onclick="toggleUnit(${ui})">
+                <span>📦 ${u.unit || 'Unit ' + (ui+1)}</span>
+                <span style="font-size:0.8rem;color:rgba(255,255,255,0.5);">${(u.chapters||[]).length} chapters ▾</span>
+            </div>
+            <div class="unit-body" id="unit-${ui}">
+                ${(u.chapters||[]).map(c => `
+                    <div class="chapter-row">
+                        <div style="flex:1">
+                            <div class="chapter-name">📖 ${c.chapter}</div>
+                            <div>${(c.topics||[]).map(t => `<span class="topic-pill">${t}</span>`).join('')}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+    // Open first unit by default
+    if (units.length) document.getElementById('unit-0').classList.add('open');
+}
+
+function toggleUnit(idx) {
+    const body = document.getElementById('unit-' + idx);
+    body.classList.toggle('open');
+}
+
+// ──────────────────────────────────────────────
+// CHAPTER CHECKBOXES (Step 3)
+// ──────────────────────────────────────────────
+function renderChapterCheckboxes(data) {
+    const container = document.getElementById('chapterCheckboxes');
+    const chapters = (data.units||[]).flatMap(u => (u.chapters||[]).map(c => c.chapter));
+    container.innerHTML = chapters.map(ch => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;font-size:0.87rem;">
+            <input type="checkbox" class="chk-chapter" value="${ch}" checked style="accent-color:#667eea;width:16px;height:16px;">
+            ${ch}
+        </label>
+    `).join('');
+}
+
+function selectAllChapters() { document.querySelectorAll('.chk-chapter').forEach(c => c.checked = true); }
+function clearChapters() { document.querySelectorAll('.chk-chapter').forEach(c => c.checked = false); }
+
+// ──────────────────────────────────────────────
+// SECTIONS BUILDER
+// ──────────────────────────────────────────────
+function renderSections() {
+    const container = document.getElementById('sectionsContainer');
+    container.innerHTML = sections.map((s, i) => `
+        <div class="section-row">
+            <input type="text" value="${s.name}" onchange="sections[${i}].name=this.value" placeholder="Section A">
+            <select onchange="sections[${i}].type=this.value">
+                ${['MCQ','Short','Long','Fill in Blank','Case Study'].map(t =>
+                    `<option value="${t}" ${s.type===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+            <input type="number" value="${s.count}" min="1" max="50" onchange="sections[${i}].count=+this.value" placeholder="10">
+            <input type="number" value="${s.marksEach}" min="1" max="20" onchange="sections[${i}].marksEach=+this.value" placeholder="1">
+            <button class="btn btn-danger btn-sm" onclick="removeSection(${i})" ${sections.length===1?'disabled':''}>✕</button>
+        </div>
+    `).join('');
+}
+
+function addSection() {
+    sections.push({ name:`Section ${String.fromCharCode(65+sections.length)}`, type:'Short', count:5, marksEach:3 });
+    renderSections();
+}
+function removeSection(i) { if (sections.length > 1) { sections.splice(i, 1); renderSections(); } }
+
+// ──────────────────────────────────────────────
+// STEP 3 → GENERATE QUESTIONS
+// ──────────────────────────────────────────────
+async function generateQuestions() {
+    if (!syllabusId) { showToast('No syllabus loaded', 'error'); return; }
+
+    const selectedChapters = [...document.querySelectorAll('.chk-chapter:checked')].map(c => c.value);
+    if (!selectedChapters.length) { showToast('Select at least one chapter', 'error'); return; }
+
+    const payload = {
+        paperType: document.getElementById('paperType').value,
+        totalMarks: +document.getElementById('totalMarks').value,
+        difficulty: document.getElementById('difficultyLevel').value,
+        duration: +document.getElementById('duration').value,
+        bloomsLevel: document.getElementById('bloomsLevel').value,
+        language: document.getElementById('language').value,
+        selectedChapters,
+        sections
+    };
+
+    goStep(4);
+    document.getElementById('generatingBox').style.display = 'block';
+    document.getElementById('questionsBox').style.display = 'none';
+
+    try {
+        const resp = await fetch(`/api/syllabus/${syllabusId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-email': user.email },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error || 'Generation failed');
+
+        paperId = data.paperId;
+        questions = data.questions || [];
+        renderQuestions();
+        document.getElementById('generatingBox').style.display = 'none';
+        document.getElementById('questionsBox').style.display = 'block';
+        showToast(`${questions.length} questions generated!`, 'success');
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        document.getElementById('generatingBox').style.display = 'none';
+        document.getElementById('questionsBox').style.display = 'block';
+    }
+}
+
+// ──────────────────────────────────────────────
+// RENDER QUESTIONS
+// ──────────────────────────────────────────────
+function renderQuestions() {
+    const list = document.getElementById('questionsList');
+    // Stats bar
+    const byType = {};
+    questions.forEach(q => { byType[q.type] = (byType[q.type]||0)+1; });
+    const totalM = questions.reduce((s, q) => s + (q.marks||0), 0);
+    document.getElementById('statsBar').innerHTML = `
+        <div class="stat-item"><div class="stat-num">${questions.length}</div><div class="stat-label">Total Questions</div></div>
+        <div class="stat-item"><div class="stat-num">${totalM}</div><div class="stat-label">Total Marks</div></div>
+        ${Object.entries(byType).map(([t,c]) => `<div class="stat-item"><div class="stat-num">${c}</div><div class="stat-label">${t}</div></div>`).join('')}
+    `;
+
+    list.innerHTML = questions.map((q, i) => {
+        const diffClass = q.difficulty==='Easy'?'badge-diff-easy':q.difficulty==='Hard'?'badge-diff-hard':'badge-diff-medium';
+        const correctAns = (q.correctAnswer || q.answer?.correctOption || '').toString().toUpperCase().charAt(0);
+        const optionsHtml = (q.options||[]).map(opt => {
+            let optId = '', optText = '';
+            if (typeof opt === 'object' && opt !== null) {
+                optId  = (opt.id  || '').toString().toUpperCase().charAt(0);
+                optText = opt.text || opt.value || JSON.stringify(opt);
+            } else {
+                optText = String(opt);
+                optId = optText.charAt(0).toUpperCase();
+            }
+            const isCorrect = correctAns && optId === correctAns;
+            return `<div class="q-option ${isCorrect?'correct':''}">${optId ? optId + '. ' : ''}${optText}</div>`;
+        }).join('');
+        const sectionBadge = q.section
+            ? `<span class="q-badge" style="background:rgba(102,126,234,0.18);color:#a78bfa;border:1px solid rgba(102,126,234,0.35);">📋 ${q.section}</span>`
+            : '';
+        return `
+        <div class="q-card" id="qcard-${i}">
+            <div class="q-meta">
+                ${sectionBadge}
+                <span class="q-badge badge-type">${q.type||'MCQ'}</span>
+                <span class="q-badge ${diffClass}">${q.difficulty||'Medium'}</span>
+                <span class="q-badge badge-marks">⭐ ${q.marks||1} mark${(q.marks||1)>1?'s':''}</span>
+                ${q.bloomsLevel?`<span class="q-badge" style="background:rgba(251,191,36,0.12);color:#fcd34d;border:1px solid rgba(251,191,36,0.25);">🧠 ${q.bloomsLevel}</span>`:''}
+            </div>
+            <div class="q-text">Q${q.questionNo||i+1}. ${q.text||''}</div>
+            ${q.options && q.options.length ? `<div class="q-options">${optionsHtml}</div>` : ''}
+            <div class="q-actions">
+                <button class="btn btn-secondary btn-sm" onclick="toggleEdit(${i})">✏️ Edit</button>
+                <button class="btn btn-secondary btn-sm" onclick="regenQuestion(${i})">🔄 Regenerate</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteQuestion(${i})">🗑️ Remove</button>
+            </div>
+            <div class="q-edit-form" id="qedit-${i}">
+                <textarea id="qtextarea-${i}" rows="3">${q.text||''}</textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button class="btn btn-success btn-sm" onclick="saveEdit(${i})">💾 Save</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleEdit(${i})">Cancel</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleEdit(i) { document.getElementById('qedit-' + i).classList.toggle('open'); }
+
+function saveEdit(i) {
+    questions[i].text = document.getElementById('qtextarea-' + i).value;
+    toggleEdit(i);
+    renderQuestions();
+    showToast('Question updated', 'success');
+}
+
+function deleteQuestion(i) {
+    questions.splice(i, 1);
+    renderQuestions();
+    showToast('Question removed', 'success');
+}
+
+async function regenQuestion(i) {
+    showToast('Regenerating question...', 'success');
+    // Simple approach: re-run full generation and swap this question
+    questions.splice(i, 1);
+    renderQuestions();
+    showToast('Removed — click Regenerate All to get fresh questions', 'success');
+}
+
+// ──────────────────────────────────────────────
+// FINALISE
+// ──────────────────────────────────────────────
+function finalisePaper() {
+    if (!questions.length) { showToast('No questions to finalise', 'error'); return; }
+    showToast('Paper finalised! Saving...', 'success');
+    setTimeout(() => {
+        alert(`✅ Paper finalised!\n\nPaper ID: ${paperId}\nTotal Questions: ${questions.length}\nTotal Marks: ${questions.reduce((s,q)=>s+(q.marks||0),0)}\n\nYou can view it in Teacher Papers.`);
+        window.location.href = 'teacher-papers.html';
+    }, 1000);
+}
+
+// ──────────────────────────────────────────────
+// STEPPER NAVIGATION
+// ──────────────────────────────────────────────
+function goStep(n) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel' + n).classList.add('active');
+    for (let i = 1; i <= 4; i++) {
+        const step = document.getElementById('s' + i);
+        step.classList.remove('active', 'done');
+        if (i < n) step.classList.add('done');
+        else if (i === n) step.classList.add('active');
+    }
+    for (let i = 1; i <= 3; i++) {
+        const line = document.getElementById('line' + i);
+        line.classList.toggle('done', i < n);
+    }
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ──────────────────────────────────────────────
+// TOAST
+// ──────────────────────────────────────────────
+function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+renderSections();
+</script>
+</body>
+</html>

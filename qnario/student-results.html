@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qnario – My Results</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:#0f172a;
+  color:white;
+  min-height:100vh;
+}
+
+/* ===== MASTER BACKGROUND ===== */
+.bg-wrapper{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+}
+
+.gradient-mesh{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(at 20% 30%, #667eea 0px, transparent 50%),
+    radial-gradient(at 80% 20%, #764ba2 0px, transparent 50%),
+    radial-gradient(at 40% 80%, #4facfe 0px, transparent 50%),
+    radial-gradient(at 90% 70%, #00f2fe 0px, transparent 50%);
+  filter:blur(120px);
+  opacity:0.7;
+}
+
+.grid-overlay{
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
+  opacity:0.4;
+}
+
+/* ===== CONTAINER ===== */
+.container{
+  max-width:1200px;
+  margin:50px auto;
+  padding:40px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(25px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:24px;
+  box-shadow:0 25px 70px rgba(0,0,0,0.4);
+}
+
+/* ===== HEADER ===== */
+.header{
+  text-align:center;
+  margin-bottom:35px;
+}
+
+.header h1{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:28px;
+  background:linear-gradient(135deg,#667eea,#4facfe);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* ===== FILTERS ===== */
+.filters{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:25px;
+  flex-wrap:wrap;
+}
+
+.filters select{
+  flex:1;
+  min-width:200px;
+  padding:12px 14px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.06);
+  color:white;
+  font-size:14px;
+  cursor:pointer;
+}
+
+.filters select:focus{
+  outline:none;
+  border:1px solid #667eea;
+}
+
+/* ===== TABLE ===== */
+table{
+  width:100%;
+  border-collapse:collapse;
+  overflow:hidden;
+  border-radius:18px;
+  margin-bottom:20px;
+}
+
+thead{
+  background:linear-gradient(135deg,#667eea,#4facfe);
+}
+
+thead th{
+  padding:14px;
+  text-align:left;
+  font-weight:600;
+  font-size:14px;
+}
+
+tbody tr{
+  background:rgba(255,255,255,0.05);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  transition:0.3s;
+}
+
+tbody tr:hover{
+  background:rgba(255,255,255,0.08);
+}
+
+tbody td{
+  padding:14px;
+  font-size:14px;
+}
+
+/* ===== BUTTONS ===== */
+.actions button{
+  padding:8px 14px;
+  border-radius:12px;
+  border:none;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  margin-right:8px;
+  transition:0.3s;
+  color:white;
+}
+
+.preview-btn{
+  background:linear-gradient(135deg,#667eea,#4facfe);
+}
+
+.download-btn{
+  background:linear-gradient(135deg,#00c853,#4caf50);
+}
+
+.actions button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  text-align:center;
+  font-size:16px;
+  opacity:0.8;
+  margin-top:20px;
+}
+
+@media(max-width:768px){
+  .filters{
+    flex-direction:column;
+  }
+
+  table{
+    display:block;
+    overflow-x:auto;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg-wrapper">
+  <div class="gradient-mesh"></div>
+  <div class="grid-overlay"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>My Results</h1>
+  </div>
+
+  <div class="filters">
+    <select id="filter-exam-type">
+      <option value="">All Exam Types</option>
+      <option value="JEE">JEE</option>
+      <option value="NEET">NEET</option>
+      <option value="12th Board">12th Board</option>
+    </select>
+
+    <select id="filter-difficulty">
+      <option value="">All Difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+  </div>
+
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Exam Type</th>
+        <th>Difficulty</th>
+        <th>Score</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="empty-state" id="empty-state">No results found.</div>
+</div>
+
+<!-- BACKEND SCRIPT (UNCHANGED) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script>
+const currentUser = JSON.parse(localStorage.getItem("qnario_current_user"));
+if (!currentUser || currentUser.role !== "student") {
+  alert("You must be logged in to view your results.");
+  window.location.href = "student-login.html";
+}
+
+const results = JSON.parse(localStorage.getItem("qnario_results")) || [];
+const studentResults = results.filter(result => result.studentEmail === currentUser.email);
+
+const tableBody = document.querySelector("#results-table tbody");
+const emptyState = document.getElementById("empty-state");
+
+function renderResults(filteredResults) {
+  tableBody.innerHTML = "";
+  if (filteredResults.length === 0) {
+    emptyState.style.display = "block";
+  } else {
+    emptyState.style.display = "none";
+    filteredResults.forEach(result => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${new Date(result.createdAt).toLocaleDateString()}</td>
+        <td>${result.config.examType}</td>
+        <td>${result.config.difficulty}</td>
+        <td>${result.score}/${result.config.numQuestions}</td>
+        <td class="actions">
+          <button class="preview-btn" onclick="previewResult('${result.examId}')">Preview</button>
+          <button class="download-btn" onclick="downloadResult('${result.examId}')">Download PDF</button>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    });
+  }
+}
+
+function previewResult(examId) {
+  window.location.href = `student-result-preview.html?examId=${examId}`;
+}
+
+function downloadResult(examId) {
+  const result = studentResults.find(r => r.examId === examId);
+  if (!result) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.text("Result Report", 10, 10);
+  doc.text(`Exam Type: ${result.config.examType}`, 10, 20);
+  doc.text(`Difficulty: ${result.config.difficulty}`, 10, 30);
+  doc.text(`Score: ${result.score}/${result.config.numQuestions}`, 10, 40);
+  doc.text(`Date: ${new Date(result.createdAt).toLocaleDateString()}`, 10, 50);
+
+  let y = 60;
+  result.questions.forEach((question, index) => {
+    doc.text(`${index + 1}. ${question.text}`, 10, y);
+    y += 10;
+    doc.text(`Your Answer: ${result.answers[`question-${index}`] || "Not Answered"}`, 10, y);
+    y += 10;
+    if (question.type === "MCQ") {
+      doc.text(`Correct Answer: ${question.answer}`, 10, y);
+      y += 10;
+    }
+    y += 5;
+  });
+
+  doc.save(`result_${examId}.pdf`);
+}
+
+function applyFilters() {
+  const examTypeFilter = document.getElementById("filter-exam-type").value;
+  const difficultyFilter = document.getElementById("filter-difficulty").value;
+
+  const filteredResults = studentResults.filter(result => {
+    return (
+      (examTypeFilter === "" || result.config.examType === examTypeFilter) &&
+      (difficultyFilter === "" || result.config.difficulty === difficultyFilter)
+    );
+  });
+
+  renderResults(filteredResults);
+}
+
+document.getElementById("filter-exam-type").addEventListener("change", applyFilters);
+document.getElementById("filter-difficulty").addEventListener("change", applyFilters);
+
+renderResults(studentResults);
+</script>
+
+</body>
+</html>

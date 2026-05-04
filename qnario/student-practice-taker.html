@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Practice Exam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:#0a0e27;color:#fff;min-height:100vh;}
+        .bg-wrapper{position:fixed;inset:0;z-index:-1;overflow:hidden;}
+        .gradient-mesh{position:absolute;width:200%;height:200%;background:radial-gradient(circle at 20% 30%,#10b981 0%,transparent 40%),radial-gradient(circle at 80% 70%,#34d399 0%,transparent 40%);animation:moveMesh 20s infinite alternate;filter:blur(120px);opacity:0.3;}
+        .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;}
+        @keyframes moveMesh{0%{transform:translate(-10%,-10%)}100%{transform:translate(10%,10%)}}
+
+        /* TOPBAR */
+        .topbar{position:fixed;top:0;width:100%;height:64px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;backdrop-filter:blur(20px);background:rgba(0,0,0,0.4);z-index:200;border-bottom:1px solid rgba(255,255,255,0.07);}
+        .logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.4rem;background:linear-gradient(135deg,#10b981,#34d399);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .timer-display{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:800;padding:6px 20px;border-radius:10px;background:rgba(0,0,0,0.4);border:2px solid rgba(16,185,129,0.4);letter-spacing:2px;display:none;}
+        .timer-display.warning{border-color:rgba(245,158,11,0.7);color:#fcd34d;animation:pulse 1s infinite;}
+        .timer-display.danger{border-color:rgba(239,68,68,0.8);color:#fca5a5;animation:pulse 0.5s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+        .page{padding:84px 24px 80px;max-width:860px;margin:0 auto;}
+
+        /* LOADER */
+        .loader-center{text-align:center;padding:100px 0;}
+        .loader-center h2{font-size:1.5rem;font-weight:800;margin-bottom:8px;color:#34d399;}
+        .waiting-pulse{width:80px;height:80px;border-radius:50%;background:rgba(16,185,129,0.2);border:3px solid #10b981;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 20px;animation:waitPulse 2s infinite;}
+        @keyframes waitPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.4)}50%{box-shadow:0 0 0 20px rgba(16,185,129,0)}}
+
+        /* EXAM INTERFACE */
+        .exam-header{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px 24px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+        .exam-subject{font-weight:700;font-size:1.1rem;color:#34d399;}
+        .progress-bar-wrap{flex:1;max-width:300px;background:rgba(255,255,255,0.08);border-radius:20px;height:8px;overflow:hidden;}
+        .progress-bar-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:20px;transition:width 0.4s;}
+
+        .q-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+        .q-nav-btn{width:38px;height:38px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6);font-size:0.85rem;font-weight:600;cursor:pointer;transition:0.2s;}
+        .q-nav-btn.answered{background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.5);color:#6ee7b7;}
+        .q-nav-btn.current{background:rgba(16,185,129,0.3);border-color:#10b981;color:#fff;}
+
+        .question-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:28px;margin-bottom:20px;}
+        .q-info{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+        .q-badge{padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;}
+        .badge-ch{background:rgba(167,139,250,0.18);color:#c4b5fd;border:1px solid rgba(167,139,250,0.3);}
+        .badge-marks{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);}
+        .badge-type{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);}
+        .q-text{font-size:1.05rem;font-weight:600;line-height:1.6;margin-bottom:20px;}
+        .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .option-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.85);font-size:0.92rem;cursor:pointer;transition:0.2s;text-align:left;}
+        .option-btn:hover{border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.1);}
+        .option-btn.selected{border-color:#10b981;background:rgba(16,185,129,0.25);color:#fff;font-weight:600;}
+        .short-answer{width:100%;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);color:#fff;font-size:0.95rem;outline:none;resize:vertical;min-height:100px;font-family:'Inter',sans-serif;}
+        .short-answer:focus{border-color:#10b981;}
+
+        .q-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;flex-wrap:wrap;gap:10px;}
+        .nav-btns{display:flex;gap:10px;}
+        .btn-sm{padding:10px 20px;border-radius:10px;border:none;font-size:0.88rem;font-weight:600;cursor:pointer;transition:0.2s;}
+        .btn-outline{background:rgba(255,255,255,0.07);color:#fff;border:1px solid rgba(255,255,255,0.15);}
+        .btn-outline:hover{background:rgba(255,255,255,0.12);}
+        .btn-green{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;}
+        .btn-green:hover{transform:translateY(-2px);}
+        .btn-submit{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:10px 24px;border-radius:10px;border:none;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow: 0 4px 15px rgba(245,158,11,0.4);}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow: 0 6px 20px rgba(245,158,11,0.6);}
+
+        .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:999;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+        .toast.show{display:block;}
+        .toast.info{background:rgba(16,185,129,0.9);color:#fff;}
+        .toast.warn{background:rgba(245,158,11,0.9);color:#fff;}
+        .toast.success{background:rgba(16,185,129,0.9);color:#fff;}
+
+        @media(max-width:600px){.options-grid{grid-template-columns:1fr;}.page{padding:80px 14px 80px;}}
+    </style>
+</head>
+<body>
+<div class="bg-wrapper"><div class="gradient-mesh"></div><div class="grid-overlay"></div></div>
+
+<div class="topbar">
+    <div class="logo">Qnario Practice</div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div id="topbarInfo" style="font-size:0.85rem;color:rgba(255,255,255,0.5);">Self-Paced Practice Mode</div>
+</div>
+
+<div class="page">
+    <!-- LOADER -->
+    <div id="loaderPanel">
+        <div class="loader-center">
+            <div class="waiting-pulse">📖</div>
+            <h2>Loading Practice Exam...</h2>
+        </div>
+    </div>
+
+    <!-- EXAM PANEL -->
+    <div id="examPanel" style="display:none;">
+        <div class="exam-header">
+            <div>
+                <div class="exam-subject" id="examSubject"></div>
+                <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:2px;" id="examClass"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">PROGRESS</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+                        <span id="progressText" style="font-size:0.85rem;font-weight:700;">0%</span>
+                    </div>
+                </div>
+                <button class="btn-submit" onclick="confirmSubmit()">Submit Practice</button>
+            </div>
+        </div>
+
+        <div class="q-nav" id="qNav"></div>
+        <div id="questionArea"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const paperId = urlParams.get('paperId');
+let paper = null, answers = {}, currentQ = 0, timer = null, totalSecs = 0;
+
+document.addEventListener("DOMContentLoaded", initPractice);
+
+async function initPractice() {
+    if(!paperId) { showToast('No paper selected.', 'warn'); return; }
+    try {
+        const pData = await fetch(`/api/syllabus-papers/${paperId}`).then(r => r.json());
+        if (!pData.success) { showToast('Could not load practice paper.', 'warn'); return; }
+        paper = pData.paper;
+        totalSecs = (paper.duration || 60) * 60; // default 60 min if unset
+        
+        startExam();
+    } catch(e) {
+        showToast('Error loading paper.', 'warn');
+    }
+}
+
+function startExam() {
+    document.getElementById('loaderPanel').style.display = 'none';
+    document.getElementById('examPanel').style.display = 'block';
+    document.getElementById('examSubject').textContent = paper.subject || 'Practice Exam';
+    document.getElementById('examClass').textContent = (paper.className || '') + ' - Total Marks: ' + paper.totalMarks;
+    document.getElementById('timerDisplay').style.display = 'block';
+    
+    renderNavMap();
+    showQuestion(0);
+    startTimer();
+    showToast('Practice started! Take your time.', 'success');
+}
+
+// ── TIMER ─────────────────────────────────────────────────
+function startTimer() {
+    const disp = document.getElementById('timerDisplay');
+    timer = setInterval(() => {
+        if (totalSecs <= 0) { clearInterval(timer); autoSubmit(); return; }
+        totalSecs--;
+        const h = Math.floor(totalSecs/3600), m = Math.floor((totalSecs%3600)/60), s = totalSecs%60;
+        disp.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+        disp.className = 'timer-display' + (totalSecs<=300?' danger':totalSecs<=600?' warning':'');
+        if (totalSecs===600) showToast('⚠️ 10 minutes remaining!', 'warn');
+        if (totalSecs===300) showToast('🚨 5 minutes remaining!', 'warn');
+        if (totalSecs===60) showToast('🔴 1 minute remaining!', 'warn');
+    }, 1000);
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ── QUESTIONS ─────────────────────────────────────────────
+function renderNavMap() {
+    const nav = document.getElementById('qNav');
+    nav.innerHTML = paper.questions.map((q,i) =>
+        `<button class="q-nav-btn ${i===currentQ?'current':''} ${answers[q.questionNo||(i+1)]?'answered':''}" onclick="showQuestion(${i})">${i+1}</button>`
+    ).join('');
+}
+
+function showQuestion(idx) {
+    currentQ = idx;
+    const q = paper.questions[idx];
+    const qNo = q.questionNo || (idx+1);
+    const isShort = q.type==='Short'||q.type==='Long'||q.type==='Descriptive';
+    const savedAns = answers[qNo] || '';
+
+    document.getElementById('questionArea').innerHTML = `
+        <div class="question-card">
+            <div class="q-info">
+                <span class="q-badge badge-ch">📖 ${q.chapter||'General'}</span>
+                <span class="q-badge badge-type">${q.type||'Question'}</span>
+                <span class="q-badge badge-marks">⭐ ${q.marks||1} mark${(q.marks||1)>1?'s':''}</span>
+            </div>
+            <div class="q-text">Q${qNo}. ${q.text}</div>
+            ${isShort
+                ? `<textarea class="short-answer" id="ansInput" placeholder="Write your answer here..." onchange="saveAnswer(${qNo},this.value)">${savedAns}</textarea>`
+                : `<div class="options-grid">${(q.options||[]).map((opt)=>`<button class="option-btn ${savedAns===opt.charAt(0)?'selected':''}" onclick="selectOption(${qNo},'${opt.charAt(0)}',this)">${opt}</button>`).join('')}</div>`
+            }
+            <div class="q-footer">
+                <button class="btn-sm btn-outline" onclick="clearAnswer(${qNo})">Clear Answer</button>
+                <div class="nav-btns">
+                    ${idx>0?`<button class="btn-sm btn-outline" onclick="showQuestion(${idx-1})">← Prev</button>`:''}
+                    ${idx<paper.questions.length-1?`<button class="btn-sm btn-green" onclick="showQuestion(${idx+1})">Next →</button>`:''}
+                </div>
+            </div>
+        </div>
+    `;
+    updateProgress();
+    renderNavMap();
+}
+
+function selectOption(qNo, val, btn) { saveAnswer(qNo, val); showQuestion(currentQ); }
+function saveAnswer(qNo, val) { 
+    if(!val.trim()) delete answers[qNo]; else answers[qNo] = val; 
+    updateProgress(); renderNavMap();
+}
+function clearAnswer(qNo) { delete answers[qNo]; showQuestion(currentQ); }
+
+function updateProgress() {
+    const qCount = paper.questions.length;
+    const ansCount = Object.keys(answers).length;
+    const pct = qCount>0 ? Math.round((ansCount/qCount)*100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = pct + '%';
+}
+
+// ── SUBMIT ────────────────────────────────────────────────
+function confirmSubmit() {
+    const qCount = paper.questions.length;
+    const ansCount = Object.keys(answers).length;
+    if (ansCount < qCount) {
+        if(!confirm(`You have only answered ${ansCount}/${qCount} questions. Submit anyway?`)) return;
+    } else {
+        if(!confirm("Are you sure you want to submit your practice test?")) return;
+    }
+    submitPaper();
+}
+function autoSubmit() {
+    showToast('Time is up! Auto-submitting...', 'warn');
+    setTimeout(submitPaper, 2000);
+}
+
+async function submitPaper() {
+    clearInterval(timer);
+    document.getElementById('examPanel').style.opacity = '0.5';
+    document.getElementById('questionArea').style.pointerEvents = 'none';
+    showToast('Grading practice exam...', 'info');
+
+    const ansArray = Object.keys(answers).map(k => ({ questionNo: k, answer: answers[k] }));
+    const user = JSON.parse(localStorage.getItem('qnario_current_user') || '{}');
+    
+    try {
+        const res = await fetch(`/api/practice/submit`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                paperId: paper.id,
+                studentEmail: user.email || 'guest@student',
+                studentName: user.name || 'Practice User',
+                answers: ansArray
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.replace(`student-syllabus-result.html?resultId=${data.resultId}&practice=true`);
+        } else {
+            showToast('Failed to submit: ' + data.error, 'warn');
+            document.getElementById('examPanel').style.opacity = '1';
+            document.getElementById('questionArea').style.pointerEvents = 'auto';
+        }
+    } catch(e) {
+        showToast('Error submitting. Try again.', 'warn');
+        document.getElementById('examPanel').style.opacity = '1';
+        document.getElementById('questionArea').style.pointerEvents = 'auto';
+    }
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function showToast(msg, type='info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    setTimeout(() => { t.className='toast'; }, 4000);
+}
+</script>
+</body>
+</html>

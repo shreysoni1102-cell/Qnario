@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QNARIO - Intelligent Exam System</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+
+        body{
+            font-family:'Inter',sans-serif;
+            background:#0a0e27;
+            color:white;
+            overflow-x:hidden;
+        }
+
+        /* ================= BACKGROUND ================= */
+
+        .bg-wrapper{
+            position:fixed;
+            inset:0;
+            z-index:-1;
+            overflow:hidden;
+        }
+
+        .gradient-mesh{
+            position:absolute;
+            width:200%;
+            height:200%;
+            background:
+                radial-gradient(circle at 20% 30%, #667eea 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, #764ba2 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, #4facfe 0%, transparent 40%);
+            animation:moveMesh 20s infinite alternate ease-in-out;
+            filter:blur(120px);
+            opacity:0.7;
+        }
+
+        @keyframes moveMesh{
+            0%{transform:translate(-10%,-10%)}
+            100%{transform:translate(10%,10%)}
+        }
+
+        .grid-overlay{
+            position:absolute;
+            inset:0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size:40px 40px;
+        }
+
+        /* ================= NAVBAR ================= */
+
+        nav{
+            position:fixed;
+            width:100%;
+            padding:20px 60px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            backdrop-filter:blur(20px);
+            background:rgba(0,0,0,0.3);
+            z-index:10;
+        }
+
+        .logo{
+            font-family:'Space Grotesk',sans-serif;
+            font-weight:800;
+            font-size:1.5rem;
+            background:linear-gradient(135deg,#667eea,#4facfe);
+            background-clip:text;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .nav-btn{
+            padding:10px 25px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,0.2);
+            background:transparent;
+            color:white;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        .nav-btn:hover{
+            background:rgba(255,255,255,0.1);
+        }
+
+        /* ================= HERO ================= */
+
+        .hero{
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            text-align:center;
+            flex-direction:column;
+            padding:120px 20px 60px;
+        }
+
+        .hero h1{
+            font-family:'Space Grotesk',sans-serif;
+            font-size:4rem;
+            margin-bottom:20px;
+            background:linear-gradient(135deg,#667eea,#f5576c,#4facfe);
+            background-clip:text;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .hero p{
+            max-width:700px;
+            opacity:0.7;
+            font-size:1.2rem;
+            margin-bottom:40px;
+            line-height:1.6;
+        }
+
+        .cta{
+            padding:18px 45px;
+            border:none;
+            border-radius:12px;
+            font-size:1.1rem;
+            font-weight:600;
+            cursor:pointer;
+            background:linear-gradient(135deg,#667eea,#764ba2);
+            color:white;
+            transition:0.3s;
+        }
+
+        .cta:hover{
+            transform:translateY(-4px);
+            box-shadow:0 10px 30px rgba(102,126,234,0.5);
+        }
+
+        /* ================= FEATURES ================= */
+
+        .section{
+            padding:100px 20px;
+            text-align:center;
+        }
+
+        .section h2{
+            font-size:2.5rem;
+            margin-bottom:60px;
+        }
+
+        .features{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:30px;
+            max-width:1100px;
+            margin:auto;
+        }
+
+        .card{
+            background:rgba(255,255,255,0.05);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.1);
+            padding:40px;
+            border-radius:20px;
+            transition:0.4s;
+        }
+
+        .card:hover{
+            transform:translateY(-10px);
+            border:1px solid rgba(102,126,234,0.6);
+        }
+
+        .card h3{
+            margin-bottom:15px;
+            color:#4facfe;
+        }
+
+        .card p{
+            opacity:0.7;
+            line-height:1.6;
+        }
+
+        /* ================= FINAL CTA ================= */
+
+        .final-cta{
+            padding:120px 20px;
+            text-align:center;
+        }
+
+        .final-cta h2{
+            font-size:2.5rem;
+            margin-bottom:30px;
+        }
+
+        .final-cta button{
+            padding:18px 50px;
+            font-size:1.2rem;
+            border:none;
+            border-radius:12px;
+            cursor:pointer;
+            background:linear-gradient(135deg,#4facfe,#667eea);
+            color:white;
+        }
+
+        /* ================= FOOTER ================= */
+
+        .footer{
+            background:#111425;
+            padding:80px 20px 40px;
+            border-top:1px solid rgba(255,255,255,0.05);
+        }
+
+        .footer-container{
+            max-width:1200px;
+            margin:auto;
+        }
+
+        .footer-brand{
+            margin-bottom:60px;
+            max-width:400px;
+        }
+
+        .footer-brand h3{
+            font-family:'Space Grotesk',sans-serif;
+            font-size:1.8rem;
+            margin-bottom:15px;
+            background:linear-gradient(135deg,#667eea,#4facfe);
+            background-clip:text;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .footer-brand p{
+            opacity:0.6;
+            line-height:1.6;
+        }
+
+        .footer-columns{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+            gap:40px;
+            margin-bottom:60px;
+        }
+
+        .footer-col h4{
+            margin-bottom:15px;
+            color:#4facfe;
+            font-size:1rem;
+        }
+
+        .footer-col a{
+            display:block;
+            margin-bottom:10px;
+            text-decoration:none;
+            color:rgba(255,255,255,0.6);
+            font-size:0.9rem;
+            transition:0.3s;
+        }
+
+        .footer-col a:hover{
+            color:white;
+            transform:translateX(4px);
+        }
+
+        .footer-bottom{
+            text-align:center;
+            padding-top:30px;
+            border-top:1px solid rgba(255,255,255,0.05);
+            font-size:0.85rem;
+            opacity:0.5;
+        }
+
+        /* ================= SCROLL REVEAL ================= */
+
+        .reveal{
+            opacity:0;
+            transform:translateY(50px);
+            transition:1s ease;
+        }
+
+        .reveal.active{
+            opacity:1;
+            transform:translateY(0);
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="bg-wrapper">
+    <div class="gradient-mesh"></div>
+    <div class="grid-overlay"></div>
+</div>
+
+<nav>
+    <div class="logo">QNARIO</div>
+    <button class="nav-btn" onclick="enterApp()">Launch</button>
+</nav>
+
+<section class="hero">
+    <h1>Redefining Question Paper Generation</h1>
+    <p>
+        QNARIO is an intelligent academic platform enabling structured
+        question paper generation, role-based dashboards, and
+        performance analytics for institutions.
+    </p>
+    <button class="cta" onclick="enterApp()">Enter Platform</button>
+</section>
+
+<section class="section reveal">
+    <h2>Why QNARIO?</h2>
+    <div class="features">
+        <div class="card">
+            <h3>Smart Paper Generation</h3>
+            <p>Generate structured and balanced question papers instantly.</p>
+        </div>
+        <div class="card">
+            <h3>Student Analytics</h3>
+            <p>Track performance, accuracy, and exam statistics in real-time.</p>
+        </div>
+        <div class="card">
+            <h3>Role-Based System</h3>
+            <p>Separate dashboards for teachers and students.</p>
+        </div>
+        <div class="card">
+            <h3>Secure & Efficient</h3>
+            <p>Optimized workflows ensuring structured academic management.</p>
+        </div>
+    </div>
+</section>
+
+<section class="final-cta reveal">
+    <h2>Experience Smarter Examination Management</h2>
+    <button onclick="enterApp()">Get Started</button>
+</section>
+
+<section class="footer">
+    <div class="footer-container">
+        <div class="footer-brand">
+            <h3>QNARIO</h3>
+            <p>
+                Intelligent Question Paper Generation & Academic
+                Analytics Platform built for modern institutions.
+            </p>
+        </div>
+
+        <div class="footer-columns">
+            <div class="footer-col">
+                <h4>Product</h4>
+                <a href="#">Paper Generator</a>
+                <a href="#">Student Dashboard</a>
+                <a href="#">Analytics Reports</a>
+                <a href="#">Role Management</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Features</h4>
+                <a href="#">Smart Distribution</a>
+                <a href="#">Performance Tracking</a>
+                <a href="#">Secure Storage</a>
+                <a href="#">Exam Monitoring</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Resources</h4>
+                <a href="#">Documentation</a>
+                <a href="#">Support</a>
+                <a href="#">Release Notes</a>
+                <a href="#">System Status</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Company</h4>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            © 2026 QNARIO. All rights reserved.
+        </div>
+    </div>
+</section>
+
+<script>
+function enterApp(){
+    window.location.href="role-selection.html";
+}
+
+window.addEventListener("scroll",()=>{
+    document.querySelectorAll(".reveal").forEach(el=>{
+        const top=el.getBoundingClientRect().top;
+        if(top<window.innerHeight-100){
+            el.classList.add("active");
+        }
+    });
+});
+</script>
+
+<!-- Neon Ripple Trail -->
+<script src="cursor-ripple.js"></script>
+</body>
+</html>

@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Qnario – Create Exam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== BACKGROUND SYSTEM ===== */
+        .bg-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .gradient-mesh {
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            background:
+                radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+                radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%),
+                radial-gradient(circle at 50% 50%, #764ba255, transparent 40%);
+            filter: blur(120px);
+            animation: meshMove 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-5%, 5%) scale(1.1); }
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #4facfe);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        /* ===== LAYOUT ===== */
+        .wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 20px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 22px;
+            padding: 30px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            text-align: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        /* ===== FORM ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            align-items: end;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        select,
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        select option {
+            color: black;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #4facfe);
+            transition: 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+
+        .success { color: #34d399; text-align: center; margin-top: 10px; }
+        .error { color: #f87171; text-align: center; margin-top: 10px; }
+
+        /* ===== CUSTOM ELEMENTS ===== */
+        .question-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .question-text {
+            flex-grow: 1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .custom-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255,255,255,0.4);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            user-select: none;
+            transition: 0.2s;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .custom-checkbox:hover { border-color: #4facfe; }
+
+        .custom-checkbox[data-state="unselected"]:hover::after {
+            content: '+';
+            color: rgba(255,255,255,0.6);
+        }
+
+        .custom-checkbox[data-state="selected"] {
+            background: #4facfe;
+            border-color: #4facfe;
+            color: white;
+        }
+
+        .custom-checkbox[data-state="selected"]::after { content: '+'; }
+
+        .custom-checkbox[data-state="selected"]:hover {
+            background: #f87171;
+            border-color: #f87171;
+        }
+
+        .custom-checkbox[data-state="selected"]:hover::after { content: '-'; }
+
+        .paper-section {
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 20px;
+        }
+        .paper-section h3 {
+            color: #4facfe;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        @media(max-width:768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+        }
+        @media(max-width:500px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-wrapper">
+        <div class="gradient-mesh"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="navbar">
+        <a href="index.html" class="logo">Qnario</a>
+    </div>
+
+    <!-- MAIN BLUEPRINT FORM -->
+    <div class="wrapper">
+        <div class="container" id="blueprintContainer">
+            <h2>Paper Blueprint</h2>
+            <div class="form-grid">
+                <div>
+                    <label for="level">Level</label>
+                    <select id="level" required>
+                        <option value="">Select level...</option>
+                        <option value="11th">11th</option>
+                        <option value="12th">12th</option>
+                        <option value="UG">UG (Engineering & Technology)</option>
+                        <option value="PG">PG (Engineering & Technology)</option>
+                    </select>
+                </div>
+
+                <div id="streamGroup" style="display:none;">
+                    <label for="stream">Stream</label>
+                    <select id="stream">
+                        <option value="">Select stream...</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Computer Science Engineering (CSE)">Computer Science Engineering (CSE)</option>
+                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        <option value="Civil Engineering">Civil Engineering</option>
+                        <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="subject">Subject</label>
+                    <select id="subject" required>
+                        <option value="">Select subject...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="chapter">Chapter</label>
+                    <select id="chapter" required>
+                        <option value="">Select chapter...</option>
+                    </select>
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="specificTopics">Specific Topics (Optional)</label>
+                    <input type="text" id="specificTopics" placeholder="Any specific topics you want to cover...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAPER PATTERN / GENERATE SECTION -->
+    <div class="wrapper">
+        <div class="container" id="patternContainer">
+            <h2>Paper Pattern</h2>
+            <div class="form-row">
+                <div>
+                    <label for="sectionSelect">Section</label>
+                    <select id="sectionSelect">
+                        <option value="Section-A">Section-A</option>
+                        <option value="Section-B">Section-B</option>
+                        <option value="Section-C">Section-C</option>
+                        <option value="Section-D">Section-D</option>
+                        <option value="Section-E">Section-E</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="structureSelect">Question Structure</label>
+                    <select id="structureSelect">
+                        <option value="Single Correct MCQ">Single Correct MCQ</option>
+                        <option value="Multiple Select Question (MSQ)">Multiple Select Question (MSQ)</option>
+                        <option value="One-word Answer">One-word Answer</option>
+                        <option value="True/False">True/False</option>
+                        <option value="Short Answer">Short Answer</option>
+                        <option value="Long Answer">Long Answer</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="marksSelect">Marks</label>
+                    <select id="marksSelect">
+                        <option value="1M">1M</option>
+                        <option value="2M">2M</option>
+                        <option value="3M">3M</option>
+                        <option value="4M">4M</option>
+                        <option value="5M">5M</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="numQuestionsSelect">Number of questions</label>
+                    <input type="number" id="numQuestionsSelect" min="1" max="50" value="5">
+                </div>
+            </div>
+            <button id="generateBtn" style="margin-top: 20px;">Generate</button>
+
+            <div id="formStatus" class="error"></div>
+
+            <!-- Generated Questions List -->
+            <div id="genQuestionsArea" style="display:none; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>Generated Questions</h3>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:0;">
+                        <input type="checkbox" id="selectAllGen" style="width:18px; height:18px;">
+                        Select All
+                    </label>
+                </div>
+                <div id="genQuestionsList"></div>
+                <button id="doneSelectionBtn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top:20px;">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL QUESTION PAPER CONTAINER -->
+    <div class="wrapper" id="questionPaperWrapper" style="display:none;">
+        <div class="container" style="max-width: 1000px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Question Paper</h2>
+                <button id="savePaperBtn" style="width: auto; margin-top: 0; padding: 10px 20px;">Save Paper</button>
+            </div>
+            
+            <div id="paperDetailsInfo" style="margin-bottom: 30px; opacity:0.8; line-height:1.6; background:rgba(0,0,0,0.2); padding:15px; border-radius:10px;">
+                <!-- Filled dynamically -->
+            </div>
+
+            <div id="compiledPaperContent">
+                <!-- Compiled sections appear here -->
+            </div>
+
+            <button id="moveToNextSecBtn" style="margin-top: 30px; display:none;">Move to <span id="nextSecLabel">Section-B</span></button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Dropdown Logic (Existing style)
+        const levelSelect = document.getElementById('level');
+        const streamGroup = document.getElementById('streamGroup');
+        const streamSelect = document.getElementById('stream');
+        const subjectSelect = document.getElementById('subject');
+        const chapterSelect = document.getElementById('chapter');
+        const specificTopicsInput = document.getElementById('specificTopics');
+
+        const SUBJECTS_11_12 = ['Physics', 'Chemistry', 'Biology', 'Mathematics'];
+        const SUBJECTS_UG_CSE_IT = ['Data Structures and Algorithms (DSA)', 'Operating Systems (OS)', 'Database Management Systems (DBMS)', 'Computer Networks', 'Computer Organization and Architecture (COA)', 'Software Engineering', 'Theory of Computation (TOC)'];
+        
+        const CHAPTERS = {
+            '11th': {
+                'Physics': [
+                    'Physical World',
+                    'Units and Measurements',
+                    'Motion in a Straight Line',
+                    'Motion in a Plane',
+                    'Laws of Motion',
+                    'Work, Energy and Power',
+                    'System of Particles and Rotational Motion',
+                    'Gravitation',
+                    'Mechanical Properties of Solids',
+                    'Mechanical Properties of Fluids',
+                    'Thermal Properties of Matter',
+                    'Thermodynamics',
+                    'Kinetic Theory',
+                    'Oscillations',
+                    'Waves'
+                ],
+                'Chemistry': [
+                    'Some Basic Concepts of Chemistry',
+                    'Structure of Atom',
+                    'Classification of Elements and Periodicity in Properties',
+                    'Chemical Bonding and Molecular Structure',
+                    'Thermodynamics',
+                    'Equilibrium',
+                    'Redox Reactions',
+                    'Organic Chemistry – Some Basic Principles and Techniques',
+                    'Hydrocarbons',
+                    'The s-Block Elements',
+                    'The p-Block Elements',
+                    'Organic Chemistry – Some Basic Principles and Techniques (continued / Environmental context in some editions)',
+                    'Environmental Chemistry'
+                ],
+                'Biology': [
+                    'The Living World',
+                    'Biological Classification',
+                    'Plant Kingdom',
+                    'Animal Kingdom',
+                    'Morphology of Flowering Plants',
+                    'Anatomy of Flowering Plants',
+                    'Structural Organisation in Animals',
+                    'Cell: The Unit of Life',
+                    'Biomolecules',
+                    'Cell Cycle and Cell Division',
+                    'Transport in Plants',
+                    'Mineral Nutrition',
+                    'Photosynthesis in Higher Plants',
+                    'Respiration in Plants',
+                    'Plant Growth and Development',
+                    'Digestion and Absorption',
+                    'Breathing and Exchange of Gases',
+                    'Body Fluids and Circulation',
+                    'Excretory Products and Their Elimination',
+                    'Locomotion and Movement',
+                    'Neural Control and Coordination',
+                    'Chemical Coordination and Integration'
+                ],
+                'Mathematics': [
+                    'Sets',
+                    'Relations and Functions',
+                    'Trigonometric Functions',
+                    'Complex Numbers and Quadratic Equations',
+                    'Linear Inequalities',
+                    'Permutations and Combinations',
+                    'Binomial Theorem',
+                    'Sequences and Series',
+                    'Straight Lines',
+                    'Conic Sections',
+                    'Introduction to Three Dimensional Geometry',
+                    'Limits and Derivatives',
+                    'Statistics',
+                    'Probability'
+                ]
+            },
+            '12th': {
+                'Physics': [
+                    'Electric Charges and Fields',
+                    'Electrostatic Potential and Capacitance',
+                    'Current Electricity',
+                    'Moving Charges and Magnetism',
+                    'Magnetism and Matter',
+                    'Electromagnetic Induction',
+                    'Alternating Current',
+                    'Electromagnetic Waves',
+                    'Ray Optics and Optical Instruments',
+                    'Wave Optics',
+                    'Dual Nature of Radiation and Matter',
+                    'Atoms',
+                    'Nuclei',
+                    'Semiconductor Electronics: Materials, Devices and Simple Circuits'
+                ],
+                'Chemistry': [
+                    'The Solid State',
+                    'Solutions',
+                    'Electrochemistry',
+                    'Chemical Kinetics',
+                    'Surface Chemistry',
+                    'General Principles and Processes of Isolation of Elements',
+                    'The p-Block Elements',
+                    'The d- and f-Block Elements',
+                    'Coordination Compounds',
+                    'Haloalkanes and Haloarenes',
+                    'Alcohols, Phenols and Ethers',
+                    'Aldehydes, Ketones and Carboxylic Acids',
+                    'Amines',
+                    'Biomolecules',
+                    'Polymers',
+                    'Chemistry in Everyday Life'
+                ],
+                'Biology': [
+                    'Reproduction in Organisms',
+                    'Sexual Reproduction in Flowering Plants',
+                    'Human Reproduction',
+                    'Reproductive Health',
+                    'Principles of Inheritance and Variation',
+                    'Molecular Basis of Inheritance',
+                    'Evolution',
+                    'Human Health and Disease',
+                    'Strategies for Enhancement in Food Production',
+                    'Microbes in Human Welfare',
+                    'Biotechnology: Principles and Processes',
+                    'Biotechnology and its Applications',
+                    'Organisms and Populations',
+                    'Ecosystem',
+                    'Biodiversity and Conservation',
+                    'Environmental Issues'
+                ],
+                'Mathematics': [
+                    'Relations and Functions',
+                    'Inverse Trigonometric Functions',
+                    'Matrices',
+                    'Determinants',
+                    'Continuity and Differentiability',
+                    'Applications of Derivatives',
+                    'Integrals',
+                    'Applications of Integrals',
+                    'Differential Equations',
+                    'Vector Algebra',
+                    'Three Dimensional Geometry',
+                    'Linear Programming',
+                    'Probability'
+                ]
+            }
+        };
+
+        function populateSelect(select, options) {
+            select.innerHTML = '<option value="">Select...</option>';
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateSubjectOptions() {
+            const level = levelSelect.value;
+            const stream = streamSelect.value;
+            subjectSelect.innerHTML = '<option value="">Select subject...</option>';
+            if (level === '11th' || level === '12th') {
+                populateSelect(subjectSelect, SUBJECTS_11_12);
+            } else if (level === 'UG' && (stream === 'Information Technology' || stream === 'Computer Science Engineering (CSE)')) {
+                populateSelect(subjectSelect, SUBJECTS_UG_CSE_IT);
+            }
+        }
+
+        function updateChapterOptions() {
+            const level = levelSelect.value;
+            const subject = subjectSelect.value;
+            chapterSelect.innerHTML = '<option value="">Select chapter...</option>';
+            if ((level === '11th' || level === '12th') && CHAPTERS[level] && CHAPTERS[level][subject]) {
+                populateSelect(chapterSelect, CHAPTERS[level][subject]);
+            } else if (level === 'UG' && subject) {
+                populateSelect(chapterSelect, Array.from({length: 5}, (_, i) => `Unit-${i+1}`));
+            }
+        }
+
+        levelSelect.addEventListener('change', () => {
+            const level = levelSelect.value;
+            if (level === 'UG') {
+                streamGroup.style.display = 'block';
+            } else {
+                streamGroup.style.display = 'none';
+                streamSelect.value = '';
+            }
+            if (level === 'PG') {
+                alert('PG syllabus is under development');
+                levelSelect.value = '';
+                streamGroup.style.display = 'none';
+                return;
+            }
+            updateSubjectOptions();
+            updateChapterOptions();
+        });
+        streamSelect.addEventListener('change', () => { updateSubjectOptions(); updateChapterOptions(); });
+        subjectSelect.addEventListener('change', updateChapterOptions);
+
+        // Pattern Logic
+        let tempGeneratedQuestions = [];
+        let finalPaperSetup = {}; // { "Section-A": { marks: '2M', structure: 'MCQs', questions: [...] }, ... }
+        
+        const generateBtn = document.getElementById('generateBtn');
+        const formStatus = document.getElementById('formStatus');
+        const genQuestionsArea = document.getElementById('genQuestionsArea');
+        const genQuestionsList = document.getElementById('genQuestionsList');
+        const selectAllGen = document.getElementById('selectAllGen');
+        const doneSelectionBtn = document.getElementById('doneSelectionBtn');
+        const sectionSelect = document.getElementById('sectionSelect');
+        const questionPaperWrapper = document.getElementById('questionPaperWrapper');
+        const compiledPaperContent = document.getElementById('compiledPaperContent');
+        const paperDetailsInfo = document.getElementById('paperDetailsInfo');
+        const savePaperBtn = document.getElementById('savePaperBtn');
+        const moveToNextSecBtn = document.getElementById('moveToNextSecBtn');
+        const nextSecLabel = document.getElementById('nextSecLabel');
+
+        const ALL_SECTIONS = ['Section-A', 'Section-B', 'Section-C', 'Section-D', 'Section-E'];
+
+        generateBtn.addEventListener('click', async () => {
+            const level = levelSelect.value;
+            const subject = subjectSelect.value;
+            const chapter = chapterSelect.value;
+            const topics = specificTopicsInput.value;
+            
+            if(!level || !subject || !chapter) {
+                formStatus.textContent = '❌ Please select Level, Subject, and Chapter in the blueprint first.';
+                formStatus.className = 'error';
+                return;
+            }
+
+            const currentSection = sectionSelect.value;
+            // Check if section already exists in final setup
+            if(finalPaperSetup[currentSection]) {
+                formStatus.textContent = `❌ ${currentSection} has already been completed.`;
+                formStatus.className = 'error';
+                return;
+            }
+
+            const structure = document.getElementById('structureSelect').value;
+            const marks = document.getElementById('marksSelect').value;
+            const numQ = parseInt(document.getElementById('numQuestionsSelect').value);
+
+            formStatus.textContent = `⏳ Generating ${numQ} questions for ${currentSection}...`;
+            formStatus.className = 'success';
+            generateBtn.disabled = true;
+
+            try {
+                // Determine `questionType` for backend mapping based on `structure`
+                let questionType = 'Short Answer';
+                if (structure === 'Single Correct MCQ') questionType = 'MCQ';
+                else if (structure === 'Multiple Select Question (MSQ)') questionType = 'MSQ';
+                else if (structure === 'One-word Answer') questionType = 'One-word Answer';
+                else if (structure === 'True/False') questionType = 'True/False';
+                else if (structure === 'Short Answer') questionType = 'Short Answer';
+                else if (structure === 'Long Answer') questionType = 'Long Answer';
+
+                const r = await fetch('/api/generate-questions', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        topic: chapter,
+                        chapter: chapter,
+                        specificTopics: topics,
+                        numQuestions: numQ,
+                        subjectId: 'sub_' + subject,
+                        examId: 'exam_' + level,
+                        subjectName: subject,
+                        questionType: questionType,
+                        difficulty: 'Medium',
+                        marks: marks,
+                        level, stream: streamSelect.value
+                    })
+                });
+
+                if(!r.ok) {
+                    const errorResponse = await r.json().catch(() => ({}));
+                    throw new Error(errorResponse.error || 'API Request Failed');
+                }
+                const data = await r.json();
+                tempGeneratedQuestions = data.questions || [];
+
+                if(tempGeneratedQuestions.length === 0) {
+                     // Auto-generate some mocks if API returned empty array
+                     throw new Error('No questions returned from AI.');
+                }
+
+                renderGeneratedQuestions(tempGeneratedQuestions);
+                formStatus.textContent = '✅ Questions generated successfully.';
+                genQuestionsArea.style.display = 'block';
+                selectAllGen.checked = false;
+
+            } catch (err) {
+                console.error(err);
+                formStatus.textContent = `❌ Failed to generate questions with AI: ${err.message}. Showing mocks.`;
+                formStatus.className = 'error';
+                
+                // Fallback mock questions if backend fails (for prototype functionality)
+                tempGeneratedQuestions = Array.from({length: numQ}, (_, i) => {
+                    if (structure === 'Single Correct MCQ') {
+                        return {
+                            text: `Mock Single Correct MCQ ${i+1}: What is the significance of ${topics || chapter} in ${subject}?`,
+                            options: ['Option A', 'Option B', 'Option C', 'Option D'],
+                            correctAnswer: 'B'
+                        };
+                    } else if (structure === 'Multiple Select Question (MSQ)') {
+                        return {
+                            text: `Mock MSQ ${i+1}: Which are core concepts in ${topics || chapter}? (Select all that apply)`,
+                            options: ['Option A', 'Option B', 'Option C', 'Option D', 'Option E'],
+                            correctAnswers: 'A, C, E'
+                        };
+                    } else if (structure === 'One-word Answer') {
+                        return {
+                            text: `Mock One-word ${i+1}: What is the key term for ${topics || chapter} in ${subject}?`,
+                            correctAnswer: 'Term'
+                        };
+                    } else if (structure === 'True/False') {
+                        const questionTypes = [
+                            'Which of the following statements are True?',
+                            'Which of the following statements are False?',
+                            'Identify the True statements from the following:',
+                            'Identify the False statements from the following:'
+                        ];
+                        const randomType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+                        const isAskingForTrue = randomType.includes('True') && !randomType.includes('False');
+                        const isAskingForFalse = randomType.includes('False') && !randomType.includes('True');
+                        
+                        // Generate 4 statements with mixed true/false
+                        const statements = [];
+                        const correctAnswers = [];
+                        
+                        for (let j = 0; j < 4; j++) {
+                            const isTrue = Math.random() > 0.5;
+                            statements.push(`${topics || chapter} statement ${String.fromCharCode(97 + j)}: ${isTrue ? 'This is a true statement' : 'This is a false statement'}`);
+                            correctAnswers.push(isTrue ? 'True' : 'False');
+                        }
+                        
+                        return {
+                            text: `Mock True/False ${i+1}: ${randomType}`,
+                            statements: statements,
+                            questionType: randomType,
+                            correctAnswers: correctAnswers
+                        };
+                    } else if (structure === 'Short Answer') {
+                        return {
+                            text: `Mock Short Answer ${i+1}: Explain briefly about ${topics || chapter} in ${subject}.`,
+                            answer: 'A concise explanation in 2-3 lines.'
+                        };
+                    } else if (structure === 'Long Answer') {
+                        return {
+                            text: `Mock Long Answer ${i+1}: Discuss in detail the importance of ${topics || chapter} in ${subject}.`,
+                            detailedAnswer: 'A fully developed response of 5-7 lines explaining key points, examples, and reasoning.'
+                        };
+                    } else {
+                        return {
+                            text: `Mock Question ${i+1}: What is the significance of ${topics || chapter} in ${subject}?`,
+                            correctAnswer: 'Sample Answer'
+                        };
+                    }
+                });
+
+                renderGeneratedQuestions(tempGeneratedQuestions);
+                
+                genQuestionsArea.style.display = 'block';
+                selectAllGen.checked = false;
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+
+        function formatOption(opt) {
+            if (typeof opt === 'string') return opt;
+            if (opt && typeof opt === 'object') return opt.text || opt.value || (opt.id ? `${opt.id}` : JSON.stringify(opt));
+            return String(opt);
+        }
+
+        function getResolvedAnswer(q, structure) {
+            if (!q) return 'N/A';
+
+            const resolveVal = (value) => {
+                if (value === undefined || value === null) return null;
+
+                if (typeof value === 'string') {
+                    const trimmed = value.trim();
+                    return trimmed ? trimmed : null;
+                }
+
+                if (typeof value === 'number' || typeof value === 'boolean') {
+                    return String(value);
+                }
+
+                if (Array.isArray(value)) {
+                    return value.map(v => resolveVal(v) || '').filter(Boolean).join(', ');
+                }
+
+                if (typeof value === 'object') {
+                    if ('correctOption' in value && value.correctOption != null) {
+                        const optionKey = String(value.correctOption).trim();
+                        if (q.options && Array.isArray(q.options) && /^[A-Za-z]$/.test(optionKey)) {
+                            const idx = optionKey.toUpperCase().charCodeAt(0) - 65;
+                            if (q.options[idx]) {
+                                return `${optionKey.toUpperCase()}) ${formatOption(q.options[idx])}`;
+                            }
+                        }
+                        return optionKey;
+                    }
+
+                    if ('correctAnswers' in value && value.correctAnswers != null) {
+                        return resolveVal(value.correctAnswers);
+                    }
+
+                    if ('answer' in value && value.answer != null) {
+                        return resolveVal(value.answer);
+                    }
+
+                    if ('text' in value && value.text != null) {
+                        return resolveVal(value.text);
+                    }
+
+                    if ('value' in value && value.value != null) {
+                        return resolveVal(value.value);
+                    }
+
+                    if ('explanation' in value && value.explanation != null) {
+                        return resolveVal(value.explanation);
+                    }
+
+                    // For generic object, flatten keys
+                    const entries = Object.entries(value)
+                        .map(([k, v]) => `${k}: ${resolveVal(v)}`)
+                        .filter((item) => item && !item.endsWith(': null'));
+                    if (entries.length > 0) {
+                        return entries.join(' | ');
+                    }
+
+                    return JSON.stringify(value);
+                }
+
+                return String(value);
+            };
+
+            const fromQ = (keys) => {
+                for (const k of keys) {
+                    const resolved = resolveVal(q[k]);
+                    if (resolved !== null && resolved !== undefined && String(resolved).trim() !== '') {
+                        return String(resolved).trim();
+                    }
+                }
+                return null;
+            };
+
+            if (structure === 'Single Correct MCQ') {
+                const raw = fromQ(['correctAnswer', 'answer', 'option', 'correct']);
+                if (!raw) return 'N/A';
+
+                if (q.options && Array.isArray(q.options)) {
+                    const normalized = raw.trim();
+                    if (/^[A-Za-z]$/.test(normalized)) {
+                        const idx = normalized.toUpperCase().charCodeAt(0) - 65;
+                        if (q.options[idx]) return `${normalized.toUpperCase()}) ${formatOption(q.options[idx])}`;
+                    }
+                    if (/^[0-9]+$/.test(normalized)) {
+                        const idx = parseInt(normalized, 10);
+                        if (q.options[idx]) return `${idx}) ${formatOption(q.options[idx])}`;
+                    }
+                    const found = q.options.find(opt => String(opt).trim().toLowerCase() === normalized.toLowerCase());
+                    if (found) {
+                        const idx = q.options.indexOf(found);
+                        return `${String.fromCharCode(65 + idx)}) ${formatOption(found)}`;
+                    }
+                }
+
+                return raw;
+            }
+
+            if (structure === 'Multiple Select Question (MSQ)') {
+                const raw = fromQ(['correctAnswers', 'correctAnswer', 'answer', 'options']);
+                if (!raw || raw === 'N/A') return 'N/A';
+
+                if (Array.isArray(q.options)) {
+                    const normalizedItems = String(raw).split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+                    const mapped = normalizedItems.map(item => {
+                        if (/^[A-Za-z]$/.test(item)) {
+                            const idx = item.toUpperCase().charCodeAt(0) - 65;
+                            if (q.options[idx]) return `${item.toUpperCase()}) ${formatOption(q.options[idx])}`;
+                        }
+                        return item;
+                    });
+                    return mapped.join(', ');
+                }
+
+                return raw;
+            }
+
+            if (structure === 'One-word Answer') {
+                const raw = fromQ(['correctAnswer', 'answer', 'correct', 'correctAnswers']);
+                if (!raw) return 'N/A';
+                return String(raw).replace(/^[A-Da-d][\)\.][\s]*/g, '').trim();
+            }
+
+            if (structure === 'True/False') {
+                if (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0) {
+                    return q.correctAnswers.map((val, idx) => `${String.fromCharCode(97 + idx)}) ${String(val).trim()}`).join(', ');
+                }
+                const rawTF = fromQ(['correctAnswers', 'correctAnswer', 'answer', 'correct']);
+                if (rawTF) {
+                    const parts = String(rawTF).split(/[\r\n]+/).map(line => line.trim()).filter(Boolean);
+                    if (parts.length >= 4) {
+                        return parts.map((line, idx) => `${String.fromCharCode(97 + idx)}) ${line.replace(/^[A-Da-d][\)\.][\s]*/g, '').trim()}`).join(', ');
+                    }
+                    return String(rawTF).replace(/^[A-Da-d][\)\.][\s]*/g, '').trim();
+                }
+                return 'N/A';
+            }
+
+            if (structure === 'Short Answer') {
+                return fromQ(['answer', 'correctAnswer', 'detailedAnswer']) || 'N/A';
+            }
+
+            if (structure === 'Long Answer') {
+                return fromQ(['detailedAnswer', 'answer', 'correctAnswer']) || 'N/A';
+            }
+
+            return fromQ(['answer', 'correctAnswer', 'detailedAnswer']) || 'N/A';
+        }
+
+        function renderGeneratedQuestions(qs) {
+            genQuestionsList.innerHTML = '';
+            const structure = document.getElementById('structureSelect').value;
+            qs.forEach((q, idx) => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                let content = '';
+
+                if (structure === 'Single Correct MCQ') {
+                    content = `
+                        <strong>Question:</strong> ${q.text || 'Generated question'}<br><br>
+                        <strong>Options:</strong><br>
+                        ${q.options ? q.options.map((opt, i) => `${String.fromCharCode(65 + i)}) ${formatOption(opt)}`).join('<br>') : 'A) Option1<br>B) Option2<br>C) Option3<br>D) Option4'}<br><br>
+                        <strong>Correct Answer:</strong> ${getResolvedAnswer(q, structure)}
+                    `;
+                } else if (structure === 'Multiple Select Question (MSQ)') {
+                    content = `
+                        <strong>Question:</strong> ${q.text || 'Generated question'}<br>
+                        <em style="opacity:0.8;">(Select all that apply)</em><br><br>
+                        <strong>Options:</strong><br>
+                        ${q.options ? q.options.map((opt, i) => `${String.fromCharCode(65 + i)}) ${formatOption(opt)}`).join('<br>') : 'A) Option1<br>B) Option2<br>C) Option3<br>D) Option4<br>E) Option5'}<br><br>
+                        <strong>Correct Answers:</strong> ${getResolvedAnswer(q, structure)}
+                    `;
+                } else if (structure === 'One-word Answer') {
+                    content = `
+                        <strong>Question:</strong> ${q.text || 'Generated question'}<br><br>
+                        <strong>Answer:</strong> ${getResolvedAnswer(q, structure)}
+                    `;
+                } else if (structure === 'True/False') {
+                    const statements = q.statements || q.options || (q.statement ? [q.statement] : []);
+                    const displayStatements = Array.isArray(statements) ? statements.slice(0, 4) : [];
+                    const questionType = q.questionType || q.text || 'Which of the following statements are True?';
+                    
+                    const statementHtml = displayStatements.map((st, i) => {
+                        const label = String.fromCharCode(97 + i);
+                        return `<strong>${label})</strong> ${formatOption(st)}`;
+                    }).join('<br>');
+                    
+                    const answerText = Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0
+                        ? q.correctAnswers.map((ans, i) => `${String.fromCharCode(97 + i)}) ${String(ans).trim()}`).join(', ')
+                        : getResolvedAnswer(q, structure);
+                    
+                    content = `
+                        <strong>Question:</strong> ${questionType}<br><br>
+                        <strong>Statements:</strong><br>${statementHtml}<br><br>
+                        <strong>Answer:</strong> ${answerText}
+                    `;
+                } else if (structure === 'Short Answer') {
+                    content = `
+                        <strong>Question:</strong> ${q.text || 'Generated question'}<br><br>
+                        <strong>Answer (3-4 lines):</strong><br>${getResolvedAnswer(q, structure)}
+                    `;
+                } else if (structure === 'Long Answer') {
+                    content = `
+                        <strong>Question:</strong> ${q.text || 'Generated question'}<br><br>
+                        <strong>Detailed Answer (5-7 lines):</strong><br>${getResolvedAnswer(q, structure)}
+                    `;
+                } else {
+                    content = q.text || 'Generated question';
+                }
+
+                div.innerHTML = `
+                    <input type="checkbox" class="gen-check" data-idx="${idx}" style="width:18px; height:18px; cursor:pointer;" checked>
+                    <div class="question-text">
+                        <strong>Q${idx+1}:</strong><br>${content.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+                genQuestionsList.appendChild(div);
+            });
+            selectAllGen.checked = true; // Auto check all by default
+        }
+
+        selectAllGen.addEventListener('change', (e) => {
+            document.querySelectorAll('.gen-check').forEach(chk => chk.checked = e.target.checked);
+        });
+
+        doneSelectionBtn.addEventListener('click', () => {
+            const checks = document.querySelectorAll('.gen-check:checked');
+            if(checks.length === 0) {
+                alert('Please select at least one question.');
+                return;
+            }
+            
+            const currentSection = sectionSelect.value;
+            const structure = document.getElementById('structureSelect').value;
+            const marks = document.getElementById('marksSelect').value;
+
+            const selectedQs = Array.from(checks).map(chk => {
+                const idx = chk.getAttribute('data-idx');
+                return tempGeneratedQuestions[idx];
+            });
+
+            finalPaperSetup[currentSection] = {
+                structure, marks, questions: selectedQs
+            };
+
+            // Hide generator, show paper container
+            genQuestionsArea.style.display = 'none';
+            questionPaperWrapper.style.display = 'block';
+            
+            // Build the paper view with the updated sections
+            updatePaperContainer();
+
+            // Next Section logic
+            const currIdx = ALL_SECTIONS.indexOf(currentSection);
+            if(currIdx < ALL_SECTIONS.length - 1) {
+                const nextSec = ALL_SECTIONS[currIdx + 1];
+                nextSecLabel.textContent = nextSec;
+                moveToNextSecBtn.style.display = 'inline-block';
+                moveToNextSecBtn.onclick = () => {
+                    sectionSelect.value = nextSec;
+                    window.scrollTo({ top: document.getElementById('patternContainer').offsetTop, behavior: 'smooth' });
+                    formStatus.textContent = '';
+                };
+            } else {
+                moveToNextSecBtn.style.display = 'none';
+            }
+        });
+
+        function updatePaperContainer() {
+            // Update paper details header
+            const level = levelSelect.value;
+            const subject = subjectSelect.value;
+            const chapter = chapterSelect.value;
+            const topics = specificTopicsInput.value;
+
+            paperDetailsInfo.innerHTML = `
+                <strong>Level:</strong> ${level} <br>
+                <strong>Subject:</strong> ${subject} <br>
+                <strong>Chapter:</strong> ${chapter} ${topics ? `(${topics})` : ''}
+            `;
+
+            compiledPaperContent.innerHTML = '';
+
+            // Render each finalized section
+            ALL_SECTIONS.forEach(secKey => {
+                if(finalPaperSetup[secKey]) {
+                    const secData = finalPaperSetup[secKey];
+                    const secDiv = document.createElement('div');
+                    secDiv.className = 'paper-section';
+                    
+                    let html = `<h3>${secKey} <span style="font-size:0.8em; color:white; opacity:0.8; font-weight:normal;">(${secData.marks} - ${secData.structure})</span></h3>`;
+                    
+                    secData.questions.forEach((q, idx) => {
+                        const structure = secData.structure;
+                        
+                        // Question Text
+                        let questionHtml = `<strong>Q${idx+1}.</strong> ${q.text || 'Question'}`;
+                        
+                        // Options - only for MCQ, MSQ, True/False
+                        let optionsHtml = '';
+                        if (structure === 'Single Correct MCQ' || structure === 'Multiple Select Question (MSQ)') {
+                            optionsHtml = `
+                                <div style="margin-top:8px; margin-left:20px; opacity:0.9;">
+                                    <strong>Options:</strong><br>
+                                    ${q.options ? q.options.map((opt, i) => `${String.fromCharCode(65 + i)}) ${formatOption(opt)}`).join('<br>') : 'Options not available'}
+                                </div>
+                            `;
+                        } else if (structure === 'True/False') {
+                            const statements = Array.isArray(q.statements)
+                                ? q.statements.slice(0, 4)
+                                : (q.statement ? [q.statement] : [q.text || 'Statement A', 'Statement B', 'Statement C', 'Statement D']);
+                            const questionType = q.questionType || q.text || 'Which of the following statements are True?';
+                            const statementText = statements.map((st, i) => `${String.fromCharCode(97 + i)}) ${formatOption(st)}`).join('<br>');
+                            optionsHtml = `
+                                <div style="margin-top:8px; margin-left:20px; opacity:0.9;">
+                                    <strong>Question:</strong> ${questionType}<br><br>
+                                    <strong>Statements:</strong><br>${statementText}
+                                </div>
+                            `;
+                        }
+                        
+                        // Answer
+                        let answerHtml = '';
+                        if (structure === 'Single Correct MCQ' || structure === 'Multiple Select Question (MSQ)' || structure === 'One-word Answer' || structure === 'True/False' || structure === 'Short Answer' || structure === 'Long Answer') {
+                            const answerText = getResolvedAnswer(q, structure);
+                            answerHtml = `<div style="margin-top:8px; margin-left:20px; color:#4ade80;"><strong>Answer:</strong> ${answerText}</div>`;
+                        }
+                        
+                        // Action Buttons
+                        html += `
+                            <div class="question-item" style="border:none; padding:12px; margin:10px 0; background:rgba(255,255,255,0.05); border-radius:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:15px;">
+                                    <div class="question-text" style="flex:1;">
+                                        ${questionHtml}
+                                        ${optionsHtml}
+                                        ${answerHtml}
+                                    </div>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap; min-width:220px; justify-content:flex-end;">
+                                        <!-- Action buttons removed as requested -->
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    secDiv.innerHTML = html;
+                    compiledPaperContent.appendChild(secDiv);
+                }
+            });
+        }
+
+        // Handle Custom Checkbox Toggles
+        document.addEventListener('click', e => {
+            if(e.target.classList.contains('custom-checkbox')) {
+                const state = e.target.getAttribute('data-state');
+                if(state === 'unselected') {
+                    e.target.setAttribute('data-state', 'selected');
+                } else {
+                    e.target.setAttribute('data-state', 'unselected');
+                }
+            }
+        });
+
+        // Action Button Functions
+        window.previewQuestion = function(secKey, qIdx) {
+            const q = finalPaperSetup[secKey].questions[qIdx];
+            const structure = finalPaperSetup[secKey].structure;
+            
+            let previewContent = `<strong>Q${qIdx+1}. ${q.text}</strong><br><br>`;
+            
+            if (structure === 'Single Correct MCQ' || structure === 'Multiple Select Question (MSQ)') {
+                previewContent += `<strong>Options:</strong><br>`;
+                if (q.options) {
+                    q.options.forEach((opt, i) => {
+                        previewContent += `${String.fromCharCode(65 + i)}) ${formatOption(opt)}<br>`;
+                    });
+                }
+                previewContent += `<br><strong>Answer:</strong> ${getResolvedAnswer(q, structure)}`;
+            } else if (structure === 'True/False') {
+                previewContent += `<strong>Statement 1:</strong> ${q.statement1 || ''}<br>`;
+                previewContent += `<strong>Statement 2:</strong> ${q.statement2 || ''}<br><br>`;
+                previewContent += `<strong>Answer:</strong> ${getResolvedAnswer(q, structure)}`;
+            } else {
+                previewContent += `<strong>Answer:</strong> ${getResolvedAnswer(q, structure)}`;
+            }
+            
+            alert(previewContent);
+        };
+
+        window.showQuestionAnswer = function(secKey, qIdx) {
+            const q = finalPaperSetup[secKey].questions[qIdx];
+            const structure = finalPaperSetup[secKey].structure;
+            const answerText = getResolvedAnswer(q, structure) || 'N/A';
+            alert(`Question ${qIdx+1} Answer:\n${answerText}`);
+        };
+
+        window.downloadQuestion = function(secKey, qIdx) {
+            const q = finalPaperSetup[secKey].questions[qIdx];
+            const structure = finalPaperSetup[secKey].structure;
+            const marks = finalPaperSetup[secKey].marks;
+            
+            let content = `QUESTION ${qIdx+1}\n`;
+            content += `Structure: ${structure}\n`;
+            content += `Marks: ${marks}\n\n`;
+            content += `Question: ${q.text}\n\n`;
+            
+            if (structure === 'Single Correct MCQ' || structure === 'Multiple Select Question (MSQ)') {
+                content += `Options:\n`;
+                if (q.options) {
+                    q.options.forEach((opt, i) => {
+                        content += `${String.fromCharCode(65 + i)}) ${formatOption(opt)}\n`;
+                    });
+                }
+                content += `\n${structure === 'MSQ' ? 'Answers:' : 'Answer:'} ${structure === 'MSQ' ? (q.correctAnswers || '') : (q.correctAnswer || '')}\n`;
+            } else if (structure === 'True/False') {
+                content += `Statement 1: ${q.statement1}\n`;
+                content += `Statement 2: ${q.statement2}\n\n`;
+                content += `Answer: ${q.correctAnswer}\n`;
+            } else if (structure === 'Short Answer' || structure === 'Long Answer') {
+                content += `Answer: ${q.answer || q.detailedAnswer}\n`;
+            } else {
+                content += `Answer: ${q.correctAnswer}\n`;
+            }
+            
+            const blob = new Blob([content], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Question_${secKey}_${qIdx+1}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        window.editAnswer = function(secKey, qIdx) {
+            const q = finalPaperSetup[secKey].questions[qIdx];
+            const structure = finalPaperSetup[secKey].structure;
+            
+            let newAnswer;
+            if (structure === 'Multiple Select Question (MSQ)') {
+                newAnswer = prompt(`Edit Answers for Question ${qIdx+1}:`, q.correctAnswers || '');
+                if (newAnswer !== null) {
+                    finalPaperSetup[secKey].questions[qIdx].correctAnswers = newAnswer;
+                }
+            } else if (structure === 'Long Answer') {
+                newAnswer = prompt(`Edit Detailed Answer for Question ${qIdx+1}:`, q.detailedAnswer || '');
+                if (newAnswer !== null) {
+                    finalPaperSetup[secKey].questions[qIdx].detailedAnswer = newAnswer;
+                }
+            } else {
+                newAnswer = prompt(`Edit Answer for Question ${qIdx+1}:`, q.correctAnswer || q.answer || '');
+                if (newAnswer !== null) {
+                    if (q.correctAnswer !== undefined) {
+                        finalPaperSetup[secKey].questions[qIdx].correctAnswer = newAnswer;
+                    }
+                    if (q.answer !== undefined) {
+                        finalPaperSetup[secKey].questions[qIdx].answer = newAnswer;
+                    }
+                }
+            }
+            updatePaperContainer();
+        };
+
+        window.deleteQuestion = function(secKey, qIdx) {
+            if (confirm('Are you sure you want to delete this question?')) {
+                finalPaperSetup[secKey].questions.splice(qIdx, 1);
+                if (finalPaperSetup[secKey].questions.length === 0) {
+                    delete finalPaperSetup[secKey];
+                }
+                updatePaperContainer();
+            }
+        };
+
+        savePaperBtn.addEventListener('click', () => {
+            const finalDoc = {
+                id: 'paper_' + Date.now(),
+                date: new Date().toISOString(),
+                level: levelSelect.value,
+                subject: subjectSelect.value,
+                chapter: chapterSelect.value,
+                topics: specificTopicsInput.value,
+                sections: {}
+            };
+
+            let hasSections = false;
+
+            ALL_SECTIONS.forEach(secKey => {
+                if(finalPaperSetup[secKey] && finalPaperSetup[secKey].questions.length > 0) {
+                    const secMarks = finalPaperSetup[secKey].marks;
+                    const secStructure = finalPaperSetup[secKey].structure;
+                    const qs = finalPaperSetup[secKey].questions;
+                    
+                    // Save complete question data with answers and options
+                    finalDoc.sections[secKey] = {
+                        marks: secMarks,
+                        structure: secStructure,
+                        questions: qs.map(q => ({
+                            text: q.text,
+                            statement1: q.statement1,
+                            statement2: q.statement2,
+                            options: q.options,
+                            correctAnswer: q.correctAnswer,
+                            correctAnswers: q.correctAnswers,
+                            answer: q.answer,
+                            detailedAnswer: q.detailedAnswer
+                        }))
+                    };
+                    hasSections = true;
+                }
+            });
+
+            if (!hasSections) {
+                alert('No questions to save! Please add at least one question to a section.');
+                return;
+            }
+
+            const papers = JSON.parse(localStorage.getItem('teacherPapers') || '[]');
+            papers.push(finalDoc);
+            localStorage.setItem('teacherPapers', JSON.stringify(papers));
+
+            alert('✅ Paper saved successfully!');
+            // Save complete, redirect...
+            window.location.href = 'teacher-papers.html';
+        });
+
+    </script>
+
+</body>
+</html>

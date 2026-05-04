@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Qnario – Teacher Analytics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+    font-family:'Inter',sans-serif;
+    background:#0f172a;
+    color:white;
+    min-height:100vh;
+    overflow-x:hidden;
+}
+
+/* ===== BACKGROUND SYSTEM ===== */
+
+.bg-wrapper{
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    overflow:hidden;
+}
+
+.gradient-mesh{
+    position:absolute;
+    width:140%;
+    height:140%;
+    background:
+        radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+        radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%),
+        radial-gradient(circle at 50% 50%, #764ba255, transparent 40%);
+    filter:blur(120px);
+    animation:meshMove 20s ease-in-out infinite alternate;
+}
+
+@keyframes meshMove{
+    0%{transform:translate(0,0) scale(1);}
+    100%{transform:translate(-5%,5%) scale(1.1);}
+}
+
+.grid-overlay{
+    position:absolute;
+    inset:0;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);
+    background-size:60px 60px;
+}
+
+/* ===== NAVBAR ===== */
+
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 60px;
+}
+
+.logo{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1.6rem;
+    font-weight:700;
+    background:linear-gradient(135deg,#667eea,#4facfe);
+    background-clip:text;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    text-decoration:none;
+}
+
+/* ===== LAYOUT ===== */
+
+.container{
+    max-width:1100px;
+    margin:40px auto;
+    padding:0 20px;
+}
+
+.page-title{
+    text-align:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:2.2rem;
+    margin-bottom:40px;
+}
+
+/* ===== GLASS CARD ===== */
+
+.glass{
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(25px);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:20px;
+    padding:25px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* ===== TILES ===== */
+
+.tiles{
+    display:flex;
+    gap:25px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:40px;
+}
+
+.tile{
+    flex:1;
+    min-width:220px;
+    text-align:center;
+    padding:30px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    backdrop-filter:blur(15px);
+    font-size:2rem;
+    font-weight:700;
+}
+
+.tile-label{
+    display:block;
+    margin-top:10px;
+    font-size:0.9rem;
+    font-weight:500;
+    opacity:0.7;
+}
+
+/* ===== CHART BLOCKS ===== */
+
+.charts{
+    display:flex;
+    gap:30px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:40px;
+}
+
+.chart-block{
+    flex:1;
+    min-width:300px;
+    text-align:center;
+}
+
+.chart-title{
+    font-weight:600;
+    margin-bottom:15px;
+    opacity:0.8;
+}
+
+canvas{
+    background:rgba(255,255,255,0.05);
+    border-radius:14px;
+    padding:10px;
+}
+
+/* ===== ACTIVITY ===== */
+
+.activity{
+    margin-top:20px;
+}
+
+.activity-title{
+    font-weight:600;
+    margin-bottom:15px;
+}
+
+.activity-list{
+    list-style:none;
+}
+
+.activity-item{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;
+    padding:15px 20px;
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+}
+
+.activity-meta{
+    opacity:0.6;
+    font-size:0.85rem;
+}
+
+a{
+    color:#4facfe;
+    text-decoration:none;
+}
+
+a:hover{
+    text-decoration:underline;
+}
+
+@media(max-width:768px){
+    .tiles,.charts{
+        flex-direction:column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg-wrapper">
+    <div class="gradient-mesh"></div>
+    <div class="grid-overlay"></div>
+</div>
+
+<div class="navbar">
+    <a href="index.html" class="logo">Qnario</a>
+</div>
+
+<div class="container">
+
+<h2 class="page-title">Teacher Analytics</h2>
+
+<div class="tiles">
+    <div class="tile" id="tileTotal">0<span class="tile-label">Total Papers</span></div>
+    <div class="tile" id="tileAvg">0<span class="tile-label">Avg Questions/Paper</span></div>
+    <div class="tile" id="tileDifficulty">N/A<span class="tile-label">Most Used Difficulty</span></div>
+</div>
+
+<div class="charts">
+    <div class="glass chart-block">
+        <div class="chart-title">Papers by Exam Type</div>
+        <canvas id="barChart" width="320" height="180"></canvas>
+    </div>
+
+    <div class="glass chart-block">
+        <div class="chart-title">Question Type Distribution</div>
+        <canvas id="pieChart" width="180" height="180"></canvas>
+    </div>
+</div>
+
+<div class="glass activity">
+    <div class="activity-title">Recent Activity</div>
+    <ul class="activity-list" id="activityList"></ul>
+</div>
+
+</div>
+
+<!-- 🔒 BACKEND SCRIPT 100% UNCHANGED -->
+<script>
+// Helper: get current teacher
+        function getCurrentTeacherEmail() {
+            const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+            return user && user.role === 'teacher' ? user.email : null;
+        }
+
+        // Guard: redirect if not logged in
+        const teacherEmail = getCurrentTeacherEmail();
+        if (!teacherEmail) {
+            window.location.href = 'teacher-login.html';
+        }
+
+        // Load papers
+        const papersObj = JSON.parse(localStorage.getItem('qnario_papers') || '{}');
+        const papers = papersObj[teacherEmail] || [];
+
+        // Summary tiles
+        document.getElementById('tileTotal').innerHTML = papers.length + '<span class="tile-label">Total Papers</span>';
+        const avgQuestions = papers.length ? Math.round(papers.reduce((sum, p) => sum + (p.meta.count || 0), 0) / papers.length) : 0;
+        document.getElementById('tileAvg').innerHTML = avgQuestions + '<span class="tile-label">Avg Questions/Paper</span>';
+        const difficultyCount = {};
+        papers.forEach(p => {
+            const diff = p.meta.difficulty;
+            difficultyCount[diff] = (difficultyCount[diff] || 0) + 1;
+        });
+        let mostUsedDifficulty = 'N/A';
+        if (papers.length) {
+            mostUsedDifficulty = Object.entries(difficultyCount).sort((a,b) => b[1]-a[1])[0][0];
+        }
+        document.getElementById('tileDifficulty').innerHTML = mostUsedDifficulty + '<span class="tile-label">Most Used Difficulty</span>';
+
+        // Bar chart: Papers by Exam Type
+        function drawBarChart(ctx, data) {
+            ctx.clearRect(0,0,320,180);
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            const maxVal = Math.max(...values, 1);
+            const barW = 48;
+            const gap = 32;
+            ctx.font = "bold 14px Montserrat";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#6366f1";
+            labels.forEach((label, i) => {
+                const x = 40 + i*(barW+gap);
+                const h = Math.round((values[i]/maxVal)*100);
+                ctx.fillStyle = "#3b82f6";
+                ctx.fillRect(x, 150-h, barW, h);
+                ctx.fillStyle = "#6366f1";
+                ctx.fillText(label, x+barW/2, 170);
+                ctx.fillText(values[i], x+barW/2, 150-h-8);
+            });
+        }
+        const examTypeCount = {};
+        papers.forEach(p => {
+            const et = p.meta.examType;
+            examTypeCount[et] = (examTypeCount[et] || 0) + 1;
+        });
+        drawBarChart(document.getElementById('barChart').getContext('2d'), examTypeCount);
+
+        // Pie chart: Question Type Distribution
+        function drawPieChart(ctx, data) {
+            ctx.clearRect(0,0,180,180);
+            const total = Object.values(data).reduce((a,b)=>a+b,0) || 1;
+            const colors = ["#6366f1","#3b82f6","#a5b4fc"];
+            let start = 0;
+            let i = 0;
+            Object.entries(data).forEach(([label, val]) => {
+                const slice = (val/total)*2*Math.PI;
+                ctx.beginPath();
+                ctx.moveTo(90,90);
+                ctx.arc(90,90,70,start,start+slice);
+                ctx.closePath();
+                ctx.fillStyle = colors[i%colors.length];
+                ctx.fill();
+                start += slice;
+                i++;
+            });
+            // Legends
+            ctx.font = "bold 12px Montserrat";
+            ctx.textAlign = "left";
+            let ly = 18;
+            i = 0;
+            Object.entries(data).forEach(([label, val]) => {
+                ctx.fillStyle = colors[i%colors.length];
+                ctx.fillRect(10,ly-10,12,12);
+                ctx.fillStyle = "#6366f1";
+                ctx.fillText(label+" ("+val+")",28,ly);
+                ly += 18;
+                i++;
+            });
+        }
+        const qTypeCount = {};
+        papers.forEach(p => {
+            const qt = p.meta.type;
+            qTypeCount[qt] = (qTypeCount[qt] || 0) + 1;
+        });
+        drawPieChart(document.getElementById('pieChart').getContext('2d'), qTypeCount);
+
+        // Recent activity
+        const sortedPapers = [...papers].sort((a,b) => new Date(b.meta.createdAt) - new Date(a.meta.createdAt));
+        const activityList = document.getElementById('activityList');
+        if (!sortedPapers.length) {
+            activityList.innerHTML = '<li class="activity-item">No papers found. <a href="teacher-create-exam.html" style="color:#3b82f6;text-decoration:underline;">Create your first exam</a></li>';
+        } else {
+            sortedPapers.slice(0,10).forEach(p => {
+                activityList.innerHTML += `
+                    <li class="activity-item">
+                        <span>${p.meta.examType} – ${p.meta.type} (${p.meta.difficulty})</span>
+                        <span class="activity-meta">${new Date(p.meta.createdAt).toLocaleDateString()} • ${p.meta.count} Qs</span>
+                    </li>
+                `;
+            });
+        }
+    </script>
+
+</body>
+</html>

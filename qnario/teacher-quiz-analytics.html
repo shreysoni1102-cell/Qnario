@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Quiz Analytics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter', sans-serif; background:#0f172a; color:white; min-height:100vh; overflow-x:hidden; }
+        
+        .bg-wrapper { position:fixed; inset:0; z-index:-2; overflow:hidden; }
+        .gradient-mesh {
+            position:absolute; width:140%; height:140%;
+            background: radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+                        radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%),
+                        radial-gradient(circle at 50% 50%, #764ba255, transparent 40%);
+            filter:blur(120px); animation:meshMove 20s ease-in-out infinite alternate;
+        }
+        @keyframes meshMove { 0% {transform:translate(0,0) scale(1);} 100% {transform:translate(-5%,5%) scale(1.1);} }
+        .grid-overlay {
+            position:absolute; inset:0;
+            background-image: linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
+                              linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);
+            background-size:60px 60px;
+        }
+
+        .navbar { display:flex; justify-content:space-between; align-items:center; padding:15px 40px; background:rgba(0,0,0,0.5); backdrop-filter:blur(10px); }
+        .logo { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:700; background:linear-gradient(135deg,#667eea,#4facfe); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-decoration:none; }
+
+        .container { max-width:1100px; margin:40px auto; padding:0 20px; }
+        h2 { font-family:'Space Grotesk', sans-serif; text-align:center; font-size:2rem; margin-bottom:40px; }
+        
+        .tiles { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:40px; }
+        .tile { flex:1; min-width:200px; background:rgba(255,255,255,0.05); backdrop-filter:blur(25px); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.4); text-align:center; }
+        .tile-value { font-size:2.5rem; font-weight:800; color:#4facfe; margin-bottom:5px; }
+        .tile-label { font-size:0.9rem; opacity:0.8; }
+
+        .card { background:rgba(255,255,255,0.05); backdrop-filter:blur(25px); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.4); margin-bottom:30px; }
+        
+        .chart-container { position:relative; height:400px; width:100%; margin-bottom:20px; }
+        .list-container { max-height: 400px; overflow-y: auto; }
+        .list-item { display:flex; justify-content:space-between; padding:15px; border-bottom:1px solid rgba(255,255,255,0.1); }
+        .list-item:last-child { border-bottom:none; }
+        
+        .weak-topic { border-left:4px solid #f87171; background:rgba(248,113,113,0.1); margin-bottom:10px; border-radius:8px; padding:15px; }
+
+        .table-container { width:100%; overflow-x:auto; margin-top:20px; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { padding:15px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+        th { font-weight:600; color:#4facfe; font-size:0.95rem; text-transform:uppercase; letter-spacing:1px; }
+        tr:hover { background:rgba(255,255,255,0.03); }
+        .acc-badge { padding:6px 12px; border-radius:20px; font-weight:600; font-size:0.85rem; }
+        .acc-high { background:rgba(52,211,153,0.2); color:#34d399; }
+        .acc-med { background:rgba(245,158,11,0.2); color:#f59e0b; }
+        .acc-low { background:rgba(248,113,113,0.2); color:#f87171; }
+    </style>
+</head>
+<body>
+
+<div class="bg-wrapper"><div class="gradient-mesh"></div><div class="grid-overlay"></div></div>
+<div class="navbar"><a href="teacher-dashboard.html" class="logo">QNARIO Quiz Analysis</a></div>
+
+<div class="container" id="loadingDiv"><p style="text-align:center;">Loading analytics...</p></div>
+
+<div class="container" id="mainDiv" style="display:none;">
+    <h2>Class Quiz Performance</h2>
+
+    <div class="tiles">
+        <div class="tile">
+            <div class="tile-value" id="tQuizzes">0</div>
+            <div class="tile-label">Active Quizzes</div>
+        </div>
+        <div class="tile">
+            <div class="tile-value" id="tAttempts">0</div>
+            <div class="tile-label">Total Student Attempts</div>
+        </div>
+        <div class="tile">
+            <div class="tile-value" id="tAcc">0%</div>
+            <div class="tile-label">Average Class Accuracy</div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:30px; flex-wrap:wrap;">
+        <div class="card" style="flex:2; min-width:400px;">
+            <h3>Topic Accuracy Chart</h3>
+            <p style="opacity:0.7; font-size:0.9rem; margin-bottom:20px;">Class average score per topic across all quizzes</p>
+            <div class="chart-container">
+                <canvas id="topicChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card" style="flex:1; min-width:300px;">
+            <h3 style="color:#f87171; margin-bottom:20px;">Top Weak Topics</h3>
+            <p style="opacity:0.7; font-size:0.9rem; margin-bottom:20px;">Topics where students face the most difficulty.</p>
+            <div id="weakList" class="list-container">
+                <!-- populated by js -->
+            </div>
+            
+            <button onclick="window.location.href='teacher-create-quiz.html'" style="width:100%; margin-top:20px; padding:12px; border-radius:12px; border:none; background:linear-gradient(135deg,#f87171,#f59e0b); color:white; font-weight:bold; cursor:pointer;">
+                Create Remedial Quiz
+            </button>
+        </div>
+    <div class="card">
+        <h3>Recent Student Attempts</h3>
+        <p style="opacity:0.7; font-size:0.9rem; margin-bottom:20px;">Live feed of when students complete your generated quizzes.</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Student Email</th>
+                        <th>Quiz Title</th>
+                        <th>Score</th>
+                        <th>Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody id="attemptsTableBody">
+                    <!-- populated by js -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+    if (!user || user.role !== 'teacher') window.location.href = 'teacher-login.html';
+
+    async function loadAnalytics() {
+        try {
+            const res = await fetch('/api/quizzes/analytics', {
+                headers: { 'Content-Type':'application/json', 'x-user-email': user.email }
+            });
+            if(!res.ok) throw new Error("Could not load analytics");
+            const data = await res.json();
+
+            document.getElementById('loadingDiv').style.display = 'none';
+            document.getElementById('mainDiv').style.display = 'block';
+
+            document.getElementById('tQuizzes').innerText = data.totalQuizzes;
+            document.getElementById('tAttempts').innerText = data.totalAttempts;
+            document.getElementById('tAcc').innerText = Math.round(data.averageAccuracy) + '%';
+
+            const topics = data.topicPerformance;
+            
+            // Build Weak Topics list
+            const weakList = document.getElementById('weakList');
+            weakList.innerHTML = '';
+            // Topics are sorted weakest first
+            let hasWeak = false;
+            topics.filter(t => t.accuracy < 60).slice(0, 5).forEach(t => {
+                hasWeak = true;
+                const d = document.createElement('div');
+                d.className = 'weak-topic';
+                d.innerHTML = `<strong>${t.name}</strong><br><span style="font-size:0.9rem; opacity:0.8">${Math.round(t.accuracy)}% Accuracy across ${t.totalAttempts} questions</span>`;
+                weakList.appendChild(d);
+            });
+            if(!hasWeak && topics.length > 0) weakList.innerHTML = '<p style="color:#34d399">No weak topics found! Great job.</p>';
+            if(topics.length === 0) weakList.innerHTML = '<p>No data available yet.</p>';
+
+            // Build Recent Attempts Table
+            const tbody = document.getElementById('attemptsTableBody');
+            tbody.innerHTML = '';
+            const attempts = data.recentAttempts || [];
+            
+            if (attempts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; opacity:0.6;">No student attempts yet.</td></tr>';
+            } else {
+                attempts.forEach(att => {
+                    const acc = Math.round(att.accuracy);
+                    const badgeClass = acc >= 70 ? 'acc-high' : (acc >= 50 ? 'acc-med' : 'acc-low');
+                    const d = new Date(att.submittedAt);
+                    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="opacity:0.8; font-size:0.9rem;">${dateStr}</td>
+                        <td><strong>${att.student}</strong></td>
+                        <td>${att.quizTitle}</td>
+                        <td style="font-weight:bold;">${att.score} / ${att.totalQuestions}</td>
+                        <td><span class="acc-badge ${badgeClass}">${acc}%</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Build Chart
+            const ctx = document.getElementById('topicChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: topics.map(t => t.name),
+                    datasets: [{
+                        label: 'Accuracy %',
+                        data: topics.map(t => Math.round(t.accuracy)),
+                        backgroundColor: topics.map(t => t.accuracy < 50 ? '#f87171' : (t.accuracy < 70 ? '#f59e0b' : '#34d399')),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, ticks: { color: 'rgba(255,255,255,0.7)' } },
+                        x: { ticks: { color: 'rgba(255,255,255,0.7)' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+        } catch(e) {
+            alert(e.message);
+        }
+    }
+
+    loadAnalytics();
+</script>
+</body>
+</html>

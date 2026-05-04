@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Qnario</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles-global.css">
+    <style>
+        .main-section h1{
+            font-family:'Space Grotesk',sans-serif;
+            font-size:3rem;
+            margin-bottom:50px;
+            background:linear-gradient(135deg,#667eea,#f5576c,#4facfe);
+            background-clip:text;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+        .brand-header{
+             text-align:center;
+             margin-bottom:0;
+            }
+
+    </style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+
+<div class="floating-letters"></div>
+<div class="falling-books"></div>
+<div class="main-section">
+    <div class="brand-header">
+
+        <div class="logo-container">
+            <div class="logo-outer"></div>
+            <div class="logo-inner">Q</div>
+        </div>
+
+        <h1 class="brand-title">QNARIO</h1>
+        <p class="brand-subtitle">
+            Intelligent Question Paper Generation System
+        </p>
+
+    </div>
+<div class="main-wrapper">
+
+    <section class="main-section" id="mainSection">
+    <h1>Choose Your Role</h1> 
+    </section>
+
+    <div class="glass-container" id="mainContainer">
+
+        <div class="btn-grid">
+            <button class="btn btn-primary"
+                onclick="handleRedirect('teacher-login.html')">
+                Teacher
+            </button>
+
+            <button class="btn btn-primary"
+                onclick="handleRedirect('student-login.html')">
+                Student
+            </button>
+
+            <button class="btn btn-primary"
+                onclick="handleRedirect('analytics.html')">
+                Analytics Report
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function handleRedirect(url) {
+    const container = document.getElementById('mainContainer');
+    container.classList.add('fade-out');
+    setTimeout(() => { window.location.href = url; }, 500);
+}
+
+// Floating Letters
+const lettersContainer = document.querySelector('.floating-letters');
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function createLetter() {
+    const span = document.createElement("span");
+    span.textContent = letters[Math.floor(Math.random() * letters.length)];
+    span.style.left = Math.random() * 100 + "vw";
+    span.style.fontSize = (12 + Math.random() * 30) + "px";
+    lettersContainer.appendChild(span);
+    setTimeout(() => span.remove(), 15000);
+}
+setInterval(createLetter, 400);
+
+// Falling Books
+const booksContainer = document.querySelector('.falling-books');
+const books = ["📘","📒","📕","📚","✏️","🖊️"];
+
+function createBook() {
+    const span = document.createElement("span");
+    span.textContent = books[Math.floor(Math.random() * books.length)];
+    span.style.left = Math.random() * 100 + "vw";
+    span.style.fontSize = (18 + Math.random() * 20) + "px";
+    booksContainer.appendChild(span);
+    setTimeout(() => span.remove(), 12000);
+}
+setInterval(createBook, 1000);
+</script>
+
+</body>
+</html>

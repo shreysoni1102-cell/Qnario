@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Practice Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Inter', sans-serif; background:#0a0e27; color:white; overflow-x:hidden; }
+        .bg-wrapper { position:fixed; inset:0; z-index:-1; overflow:hidden; }
+        .gradient-mesh { position:absolute; width:200%; height:200%; background: radial-gradient(circle at 20% 30%, #10b981 0%, transparent 40%), radial-gradient(circle at 80% 70%, #34d399 0%, transparent 40%); animation: moveMesh 20s infinite alternate ease-in-out; filter: blur(120px); opacity:0.3; }
+        .grid-overlay { position:absolute; inset:0; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:40px 40px; }
+        @keyframes moveMesh { 0% { transform:translate(-10%,-10%) } 100% { transform:translate(10%,10%) } }
+        .topbar { position:fixed; width:100%; height:70px; padding:0 40px; display:flex; justify-content:space-between; align-items:center; backdrop-filter:blur(20px); background:rgba(0,0,0,0.3); z-index:100; }
+        .logo { font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:1.6rem; text-decoration:none; background:linear-gradient(135deg,#10b981,#34d399); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .page { padding: 100px 40px 40px; max-width: 1200px; margin: 0 auto; }
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.2rem; color: #34d399; margin-bottom: 30px; text-align: center; }
+        
+        .paper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .paper-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 24px; transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; }
+        .paper-card:hover { transform: translateY(-5px); border-color: rgba(16, 185, 129, 0.6); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2); }
+        .p-subject { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; color: #fff; }
+        .p-info { font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 20px; }
+        .btn-start { display: block; text-align: center; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px; border-radius: 10px; font-weight: 600; text-decoration: none; transition: 0.2s; }
+        .btn-start:hover { box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); transform: translateY(-2px); }
+        .empty-state { text-align: center; padding: 60px; color: rgba(255,255,255,0.5); font-size: 1.1rem; grid-column: 1 / -1; }
+    </style>
+</head>
+<body>
+    <div class="bg-wrapper"><div class="gradient-mesh"></div><div class="grid-overlay"></div></div>
+    
+    <div class="topbar">
+        <a href="student-dashboard.html" class="logo">← Dashboard</a>
+    </div>
+
+    <div class="page">
+        <h1>🧠 Practice Mode</h1>
+        <p style="text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 40px;">Select an AI-generated exam to practice at your own pace. No teacher code required!</p>
+
+        <div class="paper-grid" id="paperGrid">
+            <div class="empty-state">Loading practice exams...</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadPapers);
+
+        async function loadPapers() {
+            try {
+                // Fetch all syllabus papers from the system
+                const res = await fetch(`/api/syllabus-papers`);
+                const data = await res.json();
+                
+                if (!data.success || !data.papers || data.papers.length === 0) {
+                    document.getElementById('paperGrid').innerHTML = '<div class="empty-state">No practice exams available right now. Ask your teacher to generate more!</div>';
+                    return;
+                }
+
+                let html = '';
+                data.papers.reverse().forEach(p => {
+                    const d = new Date(p.createdAt);
+                    html += `
+                        <div class="paper-card">
+                            <div>
+                                <div class="p-subject">${p.subject}</div>
+                                <div class="p-info">Class: ${p.className}<br>Marks: ${p.totalMarks}<br>Date: ${d.toLocaleDateString()}</div>
+                            </div>
+                            <a href="student-practice-taker.html?paperId=${p.id}" class="btn-start">Start Practice Test</a>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('paperGrid').innerHTML = html;
+            } catch (e) {
+                document.getElementById('paperGrid').innerHTML = '<div class="empty-state" style="color:#ef4444;">Failed to load practice exams.</div>';
+            }
+        }
+    </script>
+</body>
+</html>

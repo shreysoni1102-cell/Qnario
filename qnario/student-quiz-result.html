@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Quiz Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter', sans-serif; background:#0f172a; color:white; min-height:100vh; overflow-x:hidden; }
+        
+        .bg-wrapper { position:fixed; inset:0; z-index:-2; overflow:hidden; }
+        .gradient-mesh {
+            position:absolute; width:140%; height:140%;
+            background: radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+                        radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%),
+                        radial-gradient(circle at 50% 50%, #764ba255, transparent 40%);
+            filter:blur(120px); animation:meshMove 20s ease-in-out infinite alternate;
+        }
+        @keyframes meshMove { 0% {transform:translate(0,0) scale(1);} 100% {transform:translate(-5%,5%) scale(1.1);} }
+        .grid-overlay {
+            position:absolute; inset:0;
+            background-image: linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
+                              linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);
+            background-size:60px 60px;
+        }
+
+        .navbar { display:flex; justify-content:space-between; align-items:center; padding:15px 40px; background:rgba(0,0,0,0.5); backdrop-filter:blur(10px); }
+        .logo { font-family:'Space Grotesk',sans-serif; font-size:1.4rem; font-weight:700; background:linear-gradient(135deg,#667eea,#4facfe); border-radius: 5px; background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-decoration:none; }
+
+        .container { max-width:900px; margin:40px auto; padding:0 20px; }
+        
+        .card { background:rgba(255,255,255,0.05); backdrop-filter:blur(25px); border:1px solid rgba(255,255,255,0.1); border-radius:22px; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.4); margin-bottom:30px; }
+        
+        .score-display { text-align:center; margin-bottom:20px; }
+        .score-circle { width:150px; height:150px; border-radius:50%; border:8px solid #4facfe; display:flex; flex-direction:column; justify-content:center; align-items:center; margin:0 auto 15px auto; box-shadow:0 0 30px rgba(79,172,254,0.3); }
+        .score-num { font-size:2.5rem; font-weight:800; }
+        .score-label { font-size:0.9rem; opacity:0.8; }
+
+        h3 { font-family:'Space Grotesk',sans-serif; margin-bottom:20px; font-size:1.4rem; color:#667eea; }
+        
+        .topic-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .topic-box { background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; border-left:4px solid #34d399; }
+        .topic-box.weak { border-left-color:#f87171; }
+        .topic-box.strong { border-left-color:#34d399; }
+        .topic-name { font-weight:600; font-size:1.1rem; margin-bottom:5px; }
+        .topic-stat { font-size:0.9rem; opacity:0.8; }
+        
+        .action-area { text-align:center; margin-top:30px; }
+        .btn { display:inline-block; padding:14px 28px; border-radius:12px; border:none; font-weight:600; font-size:1rem; cursor:pointer; background:linear-gradient(135deg,#f87171,#f59e0b); color:white; text-decoration:none; transition:0.3s; }
+        .btn:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(248,113,113,0.4); }
+        
+        @media(max-width:700px){ .topic-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="bg-wrapper"><div class="gradient-mesh"></div><div class="grid-overlay"></div></div>
+<div class="navbar"><a href="student-dashboard.html" class="logo">QNARIO Quiz</a></div>
+
+<div class="container" id="loadingDiv"><p style="text-align:center;">Loading results...</p></div>
+
+<div class="container" id="resultsDiv" style="display:none;">
+    <div class="card">
+        <div class="score-display">
+            <div class="score-circle">
+                <div class="score-num" id="scoreDisplay">0/0</div>
+                <div class="score-label" id="accDisplay">0% Accuracy</div>
+            </div>
+            <h2>Quiz Completed!</h2>
+            <p style="opacity:0.7; margin-top:5px;">Here is your performance breakdown.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Topic-wise Performance</h3>
+        <div class="topic-grid" id="topicsContainer"></div>
+    </div>
+    
+    <div class="card" id="weakTopicsCard" style="display:none;">
+        <h3>Personalized Learning Plan</h3>
+        <p style="opacity:0.8; margin-bottom:20px;">We noticed you struggled with some topics. Generate practice questions focused on these areas to improve.</p>
+        <div class="action-area">
+            <button class="btn" id="practiceBtn">Practice Weak Topics</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+    if (!user) window.location.href = 'student-login.html';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultId = urlParams.get('resultId');
+    if(!resultId) window.location.href = 'student-dashboard.html';
+
+    let weakTopicsList = [];
+
+    async function loadResults() {
+        try {
+            const res = await fetch(`/api/quizzes/result/${resultId}`);
+            if(!res.ok) throw new Error("Could not find result");
+            const data = await res.json();
+            
+            document.getElementById('loadingDiv').style.display = 'none';
+            document.getElementById('resultsDiv').style.display = 'block';
+            
+            document.getElementById('scoreDisplay').innerText = `${data.score}/${data.totalQuestions}`;
+            document.getElementById('accDisplay').innerText = `${Math.round(data.accuracy)}% Accuracy`;
+            
+            const topicsContainer = document.getElementById('topicsContainer');
+            topicsContainer.innerHTML = '';
+            
+            Object.keys(data.topicStats).forEach(topic => {
+                const stat = data.topicStats[topic];
+                const acc = stat.total > 0 ? (stat.correct / stat.total) * 100 : 0;
+                const isWeak = acc < 50;
+                
+                if(isWeak) weakTopicsList.push(topic);
+                
+                const box = document.createElement('div');
+                box.className = `topic-box ${isWeak ? 'weak' : 'strong'}`;
+                box.innerHTML = `
+                    <div class="topic-name">${topic}</div>
+                    <div class="topic-stat">${stat.correct} / ${stat.total} Correct (${Math.round(acc)}%)</div>
+                    <div class="topic-stat" style="margin-top:5px; color:${isWeak?'#fca5a5':'#6ee7b7'}; font-size:0.8rem;">
+                        ${isWeak ? 'Needs Practice' : 'Good Performance'}
+                    </div>
+                `;
+                topicsContainer.appendChild(box);
+            });
+            
+            if(weakTopicsList.length > 0) {
+                document.getElementById('weakTopicsCard').style.display = 'block';
+            }
+
+        } catch(e) {
+            alert(e.message);
+            window.location.href = 'student-dashboard.html';
+        }
+    }
+    
+    document.getElementById('practiceBtn').addEventListener('click', () => {
+        // Encode weak topics and pass to a practice generator endpoint or UI
+        const tpcs = encodeURIComponent(weakTopicsList.join(', '));
+        // We'll reuse student-create-exam.html if it exists, or pass topic as URL param
+        alert("Redirecting to AI Practice Generator for: " + weakTopicsList.join(', '));
+        window.location.href = `student-create-exam.html?topics=${tpcs}&difficulty=Medium`;
+    });
+
+    loadResults();
+</script>
+</body>
+</html>

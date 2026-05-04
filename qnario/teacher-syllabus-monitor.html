@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Live Exam Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:#0a0e27;color:#fff;min-height:100vh;}
+        .bg-wrapper{position:fixed;inset:0;z-index:-1;overflow:hidden;}
+        .gradient-mesh{position:absolute;width:200%;height:200%;background:radial-gradient(circle at 20% 30%,#667eea 0%,transparent 40%),radial-gradient(circle at 80% 50%,#764ba2 0%,transparent 40%);animation:moveMesh 20s infinite alternate;filter:blur(120px);opacity:0.5;}
+        .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;}
+        @keyframes moveMesh{0%{transform:translate(-10%,-10%)}100%{transform:translate(10%,10%)}}
+        .topbar{position:fixed;top:0;width:100%;height:64px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;backdrop-filter:blur(20px);background:rgba(0,0,0,0.4);z-index:200;border-bottom:1px solid rgba(255,255,255,0.07);}
+        .logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.4rem;background:linear-gradient(135deg,#667eea,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .live-badge{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);font-size:0.82rem;font-weight:700;color:#fca5a5;}
+        .live-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;animation:blink 1s infinite;}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+        .page{padding:84px 30px 60px;max-width:1300px;margin:0 auto;}
+        .glass{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px;}
+
+        /* SETUP PANEL */
+        .setup-form{max-width:500px;margin:80px auto 0;}
+        .setup-form h1{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,#a78bfa,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:6px;}
+        .setup-form p{text-align:center;color:rgba(255,255,255,0.5);margin-bottom:30px;}
+        .field{margin-bottom:18px;}
+        .field label{display:block;font-size:0.78rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-bottom:7px;}
+        .field input{width:100%;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);color:#fff;font-size:1rem;outline:none;transition:0.2s;}
+        .field input:focus{border-color:#667eea;}
+        .btn{padding:13px 24px;border-radius:12px;border:none;font-size:0.95rem;font-weight:700;cursor:pointer;transition:0.25s;display:inline-flex;align-items:center;gap:8px;}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#4facfe);color:#fff;width:100%;}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(102,126,234,0.4);}
+        .btn-sm{padding:8px 18px;font-size:0.85rem;}
+        .btn-start{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;}
+        .btn-start:hover{transform:translateY(-2px);}
+        .btn-danger{background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);}
+        .btn-danger:hover{background:rgba(239,68,68,0.35);}
+        .btn-reply{background:linear-gradient(135deg,#a78bfa,#667eea);color:#fff;}
+
+        /* DASHBOARD LAYOUT */
+        .dash-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:28px;}
+        .dash-title h2{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:800;}
+        .dash-title p{color:rgba(255,255,255,0.5);font-size:0.88rem;margin-top:3px;}
+        .room-code-display{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,#667eea,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px;}
+        .room-code-label{font-size:0.72rem;color:rgba(255,255,255,0.4);letter-spacing:1px;text-align:center;}
+
+        /* STATS STRIP */
+        .stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;margin-bottom:28px;}
+        .stat-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:18px 20px;text-align:center;}
+        .stat-num{font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#a78bfa,#4facfe);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .stat-label{font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:4px;letter-spacing:0.5px;}
+
+        /* MAIN GRID */
+        .main-grid{display:grid;grid-template-columns:1fr 360px;gap:20px;}
+        .section-title{font-size:0.72rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:14px;}
+
+        /* STUDENT CARDS */
+        .student-list{display:flex;flex-direction:column;gap:10px;max-height:440px;overflow-y:auto;}
+        .student-card{display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;transition:0.2s;}
+        .student-card.submitted{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.07);}
+        .student-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#667eea,#a78bfa);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;}
+        .student-info{flex:1;}
+        .student-name{font-weight:600;font-size:0.95rem;}
+        .student-email{font-size:0.78rem;color:rgba(255,255,255,0.4);}
+        .student-progress-bar{height:6px;border-radius:20px;background:rgba(255,255,255,0.08);margin-top:6px;overflow:hidden;}
+        .student-progress-fill{height:100%;background:linear-gradient(90deg,#667eea,#4facfe);border-radius:20px;transition:width 0.5s;}
+        .student-pct{font-size:0.78rem;font-weight:700;color:#4facfe;white-space:nowrap;}
+        .student-status{font-size:0.72rem;padding:2px 8px;border-radius:10px;}
+        .status-active{background:rgba(16,185,129,0.2);color:#6ee7b7;}
+        .status-submitted{background:rgba(79,172,254,0.2);color:#7dd3fc;}
+        .status-left{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);}
+
+        /* RESULTS TABLE */
+        .results-table{width:100%;border-collapse:collapse;}
+        .results-table th{text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.07);}
+        .results-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.87rem;}
+        .score-pct{font-weight:700;color:#4facfe;}
+        .score-pct.high{color:#6ee7b7;}
+        .score-pct.low{color:#fca5a5;}
+
+        /* SIDEBAR */
+        .sidebar-panel{display:flex;flex-direction:column;gap:16px;}
+
+        /* ANOMALY FEED */
+        .alert-feed{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+        .alert-item{padding:9px 13px;border-radius:10px;font-size:0.8rem;display:flex;gap:8px;align-items:flex-start;}
+        .alert-tab{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fcd34d;}
+        .alert-idle{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+        .alert-join{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;}
+        .alert-submit{background:rgba(79,172,254,0.12);border:1px solid rgba(79,172,254,0.25);color:#7dd3fc;}
+        .alert-left{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);}
+
+        /* DOUBT PANEL */
+        .doubt-feed{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+        .doubt-item{padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:0.83rem;}
+        .doubt-student{font-weight:700;color:#a78bfa;font-size:0.78rem;margin-bottom:3px;}
+        .reply-row{display:flex;gap:8px;}
+        .reply-input{flex:1;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.07);color:#fff;font-size:0.85rem;outline:none;}
+
+        .toast{position:fixed;bottom:24px;right:24px;padding:12px 22px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:999;display:none;}
+        .toast.show{display:block;animation:slideIn 0.3s ease;}
+        .toast.success{background:rgba(16,185,129,0.9);}
+        .toast.info{background:rgba(102,126,234,0.9);}
+        .toast.warn{background:rgba(245,158,11,0.9);}
+        @keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+        @media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+    </style>
+</head>
+<body>
+<div class="bg-wrapper"><div class="gradient-mesh"></div><div class="grid-overlay"></div></div>
+<div class="topbar">
+    <div class="logo">QNARIO</div>
+    <div class="live-badge" id="liveBadge" style="display:none;"><div class="live-dot"></div>LIVE MONITORING</div>
+    <a href="teacher-dashboard.html" style="color:rgba(255,255,255,0.5);text-decoration:none;font-size:0.88rem;">← Dashboard</a>
+</div>
+
+<div class="page">
+
+    <!-- SETUP PANEL -->
+    <div class="setup-form" id="setupPanel">
+        <div class="glass">
+            <h1>📡 Live Exam Monitor</h1>
+            <p>Create a live exam room and monitor students in real-time</p>
+            <div class="field"><label>PAPER ID (from Finalised Paper)</label><input type="text" id="paperIdInput" placeholder="spaper_1712345678901"></div>
+            <div class="field"><label>EXAM DURATION (minutes)</label><input type="number" id="durationInput" value="180" min="10" max="360"></div>
+            <button class="btn btn-primary" onclick="createRoom()">🚀 Create Exam Room</button>
+        </div>
+    </div>
+
+    <!-- LIVE DASHBOARD -->
+    <div id="dashPanel" style="display:none;">
+        <div class="dash-header">
+            <div class="dash-title">
+                <h2 id="dashSubject">Live Exam</h2>
+                <p id="dashClass">Monitoring in real-time</p>
+            </div>
+            <div style="text-align:center;">
+                <div class="room-code-display" id="dashCode">------</div>
+                <div class="room-code-label">SHARE THIS CODE WITH STUDENTS</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-sm btn-start" id="startBtn" onclick="startExam()">▶ Start Exam</button>
+                <button class="btn btn-sm btn-danger" onclick="endExam()">⏹ End Exam</button>
+            </div>
+        </div>
+
+        <div class="stats-strip">
+            <div class="stat-box"><div class="stat-num" id="statJoined">0</div><div class="stat-label">STUDENTS JOINED</div></div>
+            <div class="stat-box"><div class="stat-num" id="statSubmitted">0</div><div class="stat-label">SUBMITTED</div></div>
+            <div class="stat-box"><div class="stat-num" id="statAvgPct">—</div><div class="stat-label">AVG SCORE</div></div>
+            <div class="stat-box"><div class="stat-num" id="statAlerts">0</div><div class="stat-label">ANOMALY ALERTS</div></div>
+        </div>
+
+        <div class="main-grid">
+            <!-- LEFT: Students + Results -->
+            <div>
+                <div class="glass" style="margin-bottom:20px;">
+                    <div class="section-title">ACTIVE STUDENTS</div>
+                    <div class="student-list" id="studentList"><p style="color:rgba(255,255,255,0.3);text-align:center;padding:20px;">Waiting for students to join...</p></div>
+                </div>
+
+                <div class="glass">
+                    <div class="section-title">SUBMITTED RESULTS (LIVE)</div>
+                    <table class="results-table">
+                        <thead><tr><th>STUDENT</th><th>SCORE</th><th>MARKS</th><th>%</th><th>TIME</th></tr></thead>
+                        <tbody id="resultsBody"><tr><td colspan="5" style="color:rgba(255,255,255,0.3);text-align:center;padding:16px;">No submissions yet</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RIGHT: Alerts + Doubts -->
+            <div class="sidebar-panel">
+                <div class="glass">
+                    <div class="section-title">🚨 ANOMALY ALERTS</div>
+                    <div class="alert-feed" id="alertFeed"><p style="color:rgba(255,255,255,0.3);font-size:0.82rem;text-align:center;padding:10px;">No alerts</p></div>
+                </div>
+                <div class="glass">
+                    <div class="section-title">💬 STUDENT DOUBTS</div>
+                    <div class="doubt-feed" id="doubtFeed"><p style="color:rgba(255,255,255,0.3);font-size:0.82rem;text-align:center;padding:10px;">No doubts yet</p></div>
+                    <div class="reply-row">
+                        <input type="text" class="reply-input" id="replyInput" placeholder="Reply to all students..." onkeydown="if(event.key==='Enter')sendReply()">
+                        <button class="btn btn-sm btn-reply" onclick="sendReply()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const socket = io();
+const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+if (!user || user.role !== 'teacher') window.location.href = 'teacher-login.html';
+
+document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const pId = params.get('paperId');
+    if (pId) {
+        document.getElementById('paperIdInput').value = pId;
+    }
+});
+
+let roomCode = '', alertCount = 0;
+const studentMap = {};
+const submittedMap = {};
+
+async function createRoom() {
+    const paperId = document.getElementById('paperIdInput').value.trim();
+    const duration = parseInt(document.getElementById('durationInput').value) || 180;
+    if (!paperId) { showToast('Enter paper ID', 'warn'); return; }
+
+    const resp = await fetch('/api/exam-room/create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ paperId, teacherEmail: user.email, duration })
+    }).then(r=>r.json());
+
+    if (!resp.success) { showToast('Error: ' + resp.error, 'warn'); return; }
+    roomCode = resp.roomCode;
+
+    // Join socket as teacher
+    socket.emit('teacher_join', { roomCode });
+    document.getElementById('setupPanel').style.display = 'none';
+    document.getElementById('dashPanel').style.display = 'block';
+    document.getElementById('dashCode').textContent = roomCode;
+    document.getElementById('liveBadge').style.display = 'flex';
+
+    // Load paper info
+    const info = await fetch(`/api/exam-room/${roomCode}`).then(r=>r.json());
+    if (info.success) {
+        document.getElementById('dashSubject').textContent = info.subject || 'Exam';
+        document.getElementById('dashClass').textContent = info.className || 'Live Monitoring';
+    }
+    showToast('Room created! Share code: ' + roomCode, 'success');
+}
+
+function startExam() {
+    socket.emit('start_exam', { roomCode });
+    document.getElementById('startBtn').textContent = '✅ Exam Started';
+    document.getElementById('startBtn').disabled = true;
+    showToast('Exam started for all students!', 'success');
+}
+
+function endExam() {
+    if (!confirm('End the exam for all students?')) return;
+    showToast('Exam ended', 'info');
+}
+
+// ── SOCKET EVENTS ─────────────────────────────────────────
+socket.on('student_joined', ({ socketId, name, email, count }) => {
+    studentMap[socketId] = { name, email, progress: 0, answered: 0, status: 'active' };
+    renderStudents();
+    document.getElementById('statJoined').textContent = count;
+    addAlert('join', `${name} joined`);
+});
+
+socket.on('progress_update', ({ socketId, name, answered, total, progress }) => {
+    if (studentMap[socketId]) { studentMap[socketId].answered = answered; studentMap[socketId].progress = progress; }
+    renderStudents();
+});
+
+socket.on('student_submitted', ({ studentEmail, studentName, totalScore, totalMarks, percentage }) => {
+    submittedMap[studentEmail] = { studentName, totalScore, totalMarks, percentage, time: new Date().toLocaleTimeString() };
+    if (studentMap) Object.keys(studentMap).forEach(id => { if(studentMap[id].email===studentEmail) studentMap[id].status='submitted'; });
+    renderStudents();
+    renderResults();
+    document.getElementById('statSubmitted').textContent = Object.keys(submittedMap).length;
+    updateAvgScore();
+    addAlert('submit', `${studentName} submitted (${percentage}%)`);
+});
+
+socket.on('student_left', ({ socketId, name, count }) => {
+    if (studentMap[socketId]) studentMap[socketId].status = 'left';
+    renderStudents();
+    document.getElementById('statJoined').textContent = count;
+    addAlert('left', `${name} disconnected`);
+});
+
+socket.on('anomaly_alert', ({ studentName, type, time }) => {
+    alertCount++;
+    document.getElementById('statAlerts').textContent = alertCount;
+    const typeMap = { tab_switch:'tab_switch', idle_30s:'idle' };
+    addAlert(typeMap[type]||'tab', `⚠️ ${studentName}: ${type==='tab_switch'?'switched tab':'idle 30s'} (${time})`);
+});
+
+socket.on('doubt_received', ({ studentName, message, time }) => {
+    const feed = document.getElementById('doubtFeed');
+    const p = feed.querySelector('p');
+    if (p) p.remove();
+    const item = document.createElement('div');
+    item.className = 'doubt-item';
+    item.innerHTML = `<div class="doubt-student">${studentName} · ${time}</div>${message}`;
+    feed.appendChild(item);
+    feed.scrollTop = feed.scrollHeight;
+    showToast(`💬 Doubt from ${studentName}`, 'info');
+});
+
+function sendReply() {
+    const msg = document.getElementById('replyInput').value.trim();
+    if (!msg || !roomCode) return;
+    socket.emit('teacher_reply', { roomCode, message: msg });
+    document.getElementById('replyInput').value = '';
+    showToast('Reply sent to all students', 'success');
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function renderStudents() {
+    const list = document.getElementById('studentList');
+    const entries = Object.entries(studentMap);
+    if (!entries.length) { list.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:20px;">Waiting for students to join...</p>'; return; }
+    list.innerHTML = entries.map(([id, s]) => `
+        <div class="student-card ${s.status==='submitted'?'submitted':''}">
+            <div class="student-avatar">${s.name.charAt(0).toUpperCase()}</div>
+            <div class="student-info">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div class="student-name">${s.name}</div>
+                    <span class="student-status status-${s.status}">${s.status==='submitted'?'✅ Submitted':s.status==='left'?'Left':'Active'}</span>
+                </div>
+                <div class="student-email">${s.email}</div>
+                <div class="student-progress-bar"><div class="student-progress-fill" style="width:${s.progress||0}%"></div></div>
+            </div>
+            <div class="student-pct">${s.progress||0}%</div>
+        </div>
+    `).join('');
+}
+
+function renderResults() {
+    const tbody = document.getElementById('resultsBody');
+    const entries = Object.entries(submittedMap);
+    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:rgba(255,255,255,0.3);text-align:center;padding:16px;">No submissions yet</td></tr>'; return; }
+    tbody.innerHTML = entries.map(([email, r]) => {
+        const pctNum = parseFloat(r.percentage);
+        const cls = pctNum>=70?'high':pctNum>=40?'':'low';
+        return `<tr><td>${r.studentName}<br><small style="color:rgba(255,255,255,0.4);">${email}</small></td><td>${r.totalScore}</td><td>${r.totalMarks}</td><td class="score-pct ${cls}">${r.percentage}%</td><td style="color:rgba(255,255,255,0.4);font-size:0.8rem;">${r.time}</td></tr>`;
+    }).join('');
+}
+
+function updateAvgScore() {
+    const scores = Object.values(submittedMap).map(r => parseFloat(r.percentage));
+    if (!scores.length) return;
+    document.getElementById('statAvgPct').textContent = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) + '%';
+}
+
+function addAlert(type, text) {
+    const feed = document.getElementById('alertFeed');
+    const p = feed.querySelector('p');
+    if (p) p.remove();
+    const item = document.createElement('div');
+    const cls = type==='join'?'alert-join':type==='submit'?'alert-submit':type==='left'?'alert-left':type==='idle'?'alert-idle':'alert-tab';
+    item.className = `alert-item ${cls}`;
+    item.textContent = text;
+    feed.insertBefore(item, feed.firstChild);
+}
+
+function showToast(m, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = m; t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

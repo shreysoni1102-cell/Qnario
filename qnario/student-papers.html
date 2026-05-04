@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Qnario – My Papers</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+        }
+        .bg-wrapper { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+        .gradient-mesh {
+            position: absolute; width: 140%; height: 140%;
+            background: radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+                        radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%);
+            filter: blur(120px);
+        }
+        .navbar { display: flex; justify-content: space-between; padding: 20px 60px; backdrop-filter: blur(10px); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 700; text-decoration: none; color: #4facfe; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        h2 { margin-bottom: 30px; font-family: 'Space Grotesk', sans-serif; }
+        .paper-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .paper-info h3 { color: #4facfe; margin-bottom: 8px; }
+        .paper-info p { opacity: 0.7; font-size: 0.9rem; }
+        .actions { display: flex; gap: 12px; }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            text-decoration: none;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .btn-take { background: linear-gradient(135deg, #667eea, #4facfe); }
+        .btn-download { background: rgba(255,255,255,0.1); }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="bg-wrapper"><div class="gradient-mesh"></div></div>
+    <div class="navbar"><a href="student-dashboard.html" class="logo">Qnario</a></div>
+    <div class="container">
+        <h2>My Papers</h2>
+        <div id="papersList"></div>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+        if(!user) window.location.href = 'student-login.html';
+
+        const papersList = document.getElementById('papersList');
+        let allPapers = JSON.parse(localStorage.getItem('qnario_student_papers') || '{}');
+        let myPapers = allPapers[user.email] || [];
+
+        function renderPapers() {
+            if(myPapers.length === 0) {
+                papersList.innerHTML = '<p>No papers generated yet. <a href="student-create-exam.html" style="color:#4facfe;">Create one now!</a></p>';
+                return;
+            } 
+            
+            papersList.innerHTML = '';
+            myPapers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'paper-card';
+                card.innerHTML = `
+                    <div class="paper-info">
+                        <h3>${p.meta.subject} - ${p.meta.level}</h3>
+                        <p>${p.meta.chapter} • ${new Date(p.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="actions">
+                        <button onclick="previewPaper('${p.id}')" class="btn btn-download" style="background:rgba(255,255,255,0.2);">Preview</button>
+                        <a href="student-exam.html?paperId=${p.id}" class="btn btn-take">Take Exam</a>
+                        <button onclick="downloadPaper('${p.id}')" class="btn btn-download">Download</button>
+                        <button onclick="deletePaper('${p.id}')" class="btn btn-download" style="background:#ef4444;">Delete</button>
+                    </div>
+                `;
+                papersList.appendChild(card);
+            });
+        }
+        renderPapers();
+
+        window.deletePaper = function(id) {
+            if(!confirm("Are you sure you want to delete this paper?")) return;
+            myPapers = myPapers.filter(p => p.id !== id);
+            allPapers[user.email] = myPapers;
+            localStorage.setItem('qnario_student_papers', JSON.stringify(allPapers));
+            renderPapers();
+        };
+
+        window.previewPaper = function(id) {
+            const paper = myPapers.find(x => x.id === id);
+            if(!paper) return;
+            
+            let previewWindow = window.open("", "_blank");
+            let html = `<html><head><title>Preview - ${paper.meta.subject}</title><style>body{font-family:sans-serif; padding:40px; background:#f4f4f9; color:#333; line-height:1.6;} .question{background:#fff; padding:20px; border-radius:8px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}</style></head><body>`;
+            html += `<h2>${paper.meta.subject} (${paper.meta.level})</h2>`;
+            html += `<p><strong>Topic:</strong> ${paper.meta.chapter} | <strong>Structure:</strong> ${paper.meta.structure}</p><hr>`;
+            
+            const qList = paper.questions || [];
+            qList.forEach((q, i) => {
+                html += `<div class="question">`;
+                html += `<h4>Q${i+1}: ${q.text}</h4>`;
+                if(q.options) {
+                    q.options.forEach((opt, idx) => {
+                        const optVal = typeof opt === 'string' ? opt : (opt.text || JSON.stringify(opt));
+                        html += `<div>${String.fromCharCode(65+idx)}) ${optVal}</div>`;
+                    });
+                }
+                html += `</div>`;
+            });
+            
+            html += `</body></html>`;
+            previewWindow.document.write(html);
+        };
+
+        window.downloadPaper = function(id) {
+            const paper = myPapers.find(x => x.id === id);
+            if(!paper) return;
+            let text = `EXAM PAPER: ${paper.meta.subject}\nLevel: ${paper.meta.level}\nTopic: ${paper.meta.chapter}\nStructure: ${paper.meta.structure}\nMarks: ${paper.meta.marks}\n\n`;
+            
+            if (paper.sections) {
+                // Handle old multi-section format if exists
+                for(const sec in paper.sections) {
+                    text += `--- ${sec} (${paper.sections[sec].marks}) ---\n`;
+                    paper.sections[sec].questions.forEach((q, i) => {
+                        text += `Q${i+1}: ${q.text}\n`;
+                    });
+                    text += `\n`;
+                }
+            } else if (paper.questions) {
+                // Handle new single-list format
+                paper.questions.forEach((q, i) => {
+                    text += `Q${i+1}: ${q.text}\n`;
+                    if (q.options) {
+                        q.options.forEach((opt, idx) => {
+                            text += `   ${String.fromCharCode(65+idx)}) ${typeof opt === 'string' ? opt : (opt.text || JSON.stringify(opt))}\n`;
+                        });
+                    }
+                    text += `\n`;
+                });
+            }
+            
+            const blob = new Blob([text], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Exam_${id}.txt`;
+            a.click();
+        };
+    </script>
+</body>
+</html>

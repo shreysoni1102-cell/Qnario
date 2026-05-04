@@ -1,0 +1,10 @@
+node_modules/
+.venv/
+uploads/
+.env
+syllabi.json
+syllabus-papers.json
+exams.json
+results.json
+users.json
+NONE OF USE/

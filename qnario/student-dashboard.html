@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>QNARIO – Student Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background:#0a0e27;
+            color:white;
+            overflow-x:hidden;
+        }
+
+        /* ================= BACKGROUND ================= */
+        .bg-wrapper {
+            position:fixed;
+            inset:0;
+            z-index:-1;
+            overflow:hidden;
+        }
+        .gradient-mesh {
+            position:absolute;
+            width:200%;
+            height:200%;
+            background:
+                radial-gradient(circle at 20% 30%, #667eea 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, #764ba2 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, #4facfe 0%, transparent 40%);
+            animation: moveMesh 20s infinite alternate ease-in-out;
+            filter: blur(120px);
+            opacity:0.7;
+        }
+        .grid-overlay {
+            position:absolute;
+            inset:0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size:40px 40px;
+        }
+        @keyframes moveMesh {
+            0% { transform:translate(-10%,-10%) }
+            100% { transform:translate(10%,10%) }
+        }
+
+        /* ================= TOP NAV ================= */
+        .topbar {
+            position:fixed;
+            width:100%;
+            height:70px;
+            padding:0 40px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            backdrop-filter:blur(20px);
+            background:rgba(0,0,0,0.3);
+            z-index:100;
+        }
+
+        .logo {
+            font-family:'Space Grotesk',sans-serif;
+            font-weight:800;
+            font-size:1.6rem;
+            text-decoration:none;
+            background:linear-gradient(135deg,#667eea,#4facfe);
+            background-clip:text;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .user-info {
+            display:flex;
+            align-items:center;
+            gap:20px;
+        }
+
+        .logout-btn {
+            padding:8px 18px;
+            border-radius:8px;
+            border:none;
+            background:linear-gradient(135deg,#4facfe,#667eea);
+            color:white;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+        }
+        .logout-btn:hover {
+            transform:translateY(-2px);
+            box-shadow:0 6px 18px rgba(0,0,0,0.4);
+        }
+
+        /* ================= LAYOUT ================= */
+        .layout {
+            display:flex;
+            padding-top:70px;
+            min-height:100vh;
+        }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width:260px;
+            background:rgba(255,255,255,0.05);
+            backdrop-filter:blur(20px);
+            border-right:1px solid rgba(255,255,255,0.1);
+            padding:30px 20px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        }
+
+        .sidebar-top {
+            display:flex;
+            flex-direction:column;
+        }
+
+        .search-box {
+            margin-bottom:30px;
+        }
+
+        .search-box input {
+            width:100%;
+            padding:10px 12px;
+            border-radius:10px;
+            border:none;
+            outline:none;
+            background:rgba(255,255,255,0.08);
+            color:white;
+        }
+
+        .menu-section {
+            margin-bottom:25px;
+        }
+
+        .menu-title {
+            font-size:0.75rem;
+            letter-spacing:1px;
+            color:rgba(255,255,255,0.5);
+            margin-bottom:12px;
+        }
+
+        .menu-link {
+            display:block;
+            padding:10px 14px;
+            border-radius:8px;
+            text-decoration:none;
+            color:#4facfe;
+            font-weight:600;
+            margin-bottom:8px;
+            transition:0.3s;
+        }
+
+        .menu-link:hover,
+        .menu-link.active {
+            background:rgba(102,126,234,0.2);
+            color:white;
+        }
+
+        .profile-box {
+            padding:15px;
+            background:rgba(255,255,255,0.07);
+            border-radius:12px;
+            font-size:0.9rem;
+        }
+
+        /* ================= MAIN ================= */
+        .main {
+            flex:1;
+            padding:40px;
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+            gap:30px;
+        }
+
+        .card {
+            background:rgba(255,255,255,0.05);
+            backdrop-filter:blur(20px);
+            border-radius:20px;
+            border:1px solid rgba(255,255,255,0.1);
+            padding:30px;
+            width:320px;
+            height: 300px;
+            text-align:center;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        .card:hover {
+            transform:translateY(-6px);
+            box-shadow:0 12px 40px rgba(0,0,0,0.4);
+            border:1px solid rgba(102,126,234,0.6);
+        }
+
+        .card-icon {
+            font-size:2.5rem;
+            margin-bottom:15px;
+        }
+
+        .card-title {
+            font-size:1.2rem;
+            font-weight:700;
+            color:#4facfe;
+            margin-bottom:6px;
+        }
+
+        .card-desc {
+            font-size:0.95rem;
+            color:rgba(255,255,255,0.7);
+        }
+
+        @media(max-width:900px){
+            .layout { flex-direction:column; }
+            .sidebar { width:100%; border-right:none; border-bottom:1px solid rgba(255,255,255,0.1); }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="bg-wrapper">
+    <div class="gradient-mesh"></div>
+    <div class="grid-overlay"></div>
+</div>
+
+<div class="topbar">
+    <a href="index.html" class="logo">QNARIO</a>
+    <div class="user-info">
+        <span id="userEmail"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+
+            <div class="search-box">
+                <input type="text" placeholder="Search...">
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">MAIN</div>
+                <a href="student-syllabus-exam.html" class="menu-link" id="menuJoinLive">Join Live Exam</a>
+                <a href="student-practice.html" class="menu-link" id="menuPractice">Practice Mode</a>
+                <a href="student-create-exam.html" class="menu-link" id="menuCreateExam">Generate Exam</a>
+                <a href="student-papers.html" class="menu-link" id="menuPapers">My Papers</a>
+                <a href="student-analysits.html" class="menu-link" id="menuAnalytics">Analytics</a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">SYSTEM</div>
+                <a href="#" class="menu-link">Settings</a>
+                <a href="#" class="menu-link">Help</a>
+            </div>
+
+        </div>
+
+        <div class="profile-box">
+            Logged in as:<br>
+            <strong id="profileEmail"></strong>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <div class="card" onclick="window.location.href='student-syllabus-exam.html'" style="border-color: rgba(239, 68, 68, 0.5);">
+            <div class="card-icon">🔴</div>
+            <div class="card-title" style="color: #f87171;">Join Live Exam</div>
+            <div class="card-desc">Enter a Room Code hosted by your teacher for a live, monitored test.</div>
+        </div>
+
+        <div class="card" onclick="window.location.href='student-practice.html'" style="border-color: rgba(16, 185, 129, 0.5);">
+            <div class="card-icon">🧠</div>
+            <div class="card-title" style="color: #34d399;">Practice Mode</div>
+            <div class="card-desc">Take unlimited practice tests from the AI generated syllabus bank.</div>
+        </div>
+
+        <div class="card" onclick="window.location.href='student-create-exam.html'">
+            <div class="card-icon">📝</div>
+            <div class="card-title">Generate Custom Exam</div>
+            <div class="card-desc">Generate a new AI exam paper</div>
+        </div>
+
+        <div class="card" onclick="window.location.href='student-analysits.html'">
+            <div class="card-icon">📊</div>
+            <div class="card-title">Analytics & Insights</div>
+            <div class="card-desc">View your AI study suggestions</div>
+        </div>
+
+        <div class="card" onclick="window.location.href='student-papers.html'">
+            <div class="card-icon">📄</div>
+            <div class="card-title">My Recent Papers</div>
+            <div class="card-desc">See all generated exam papers</div>
+        </div>
+    </main>
+
+    <!-- RECENT PAPERS SECTION -->
+    <!-- <div style="padding: 0 40px 40px;">
+        <div style="background:rgba(255,255,255,0.05); backdrop-filter:blur(20px); border-radius:20px; border:1px solid rgba(255,255,255,0.1); padding:30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: #4facfe; margin:0;">My Recent Papers</h2>
+                <a href="student-papers.html" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.95rem; font-weight:600; transition:0.3s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">View All →</a>
+            </div>
+            <div id="recentPapersList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                 Papers will be injected here -->
+               <!-- <div style="padding: 20px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; text-align:center; grid-column: 1 / -1;">
+                    <p style="opacity: 0.5;">No papers generated yet.</p>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+
+    if (!user || user.role !== 'student' || !user.email) {
+        window.location.href = 'student-login.html';
+    } else {
+        document.getElementById('userEmail').innerText = user.email;
+        document.getElementById('profileEmail').innerText = user.email;
+        
+        // Load recent papers
+        const allPapers = JSON.parse(localStorage.getItem('qnario_student_papers') || '{}');
+        const myPapers = allPapers[user.email] || [];
+        const recentList = document.getElementById('recentPapersList');
+        
+        if(myPapers.length > 0) {
+            recentList.innerHTML = '';
+            myPapers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3).forEach(p => {
+                recentList.innerHTML += `
+                    <div class="card" onclick="window.location.href='student-exam.html?paperId=${p.id}'" style="height: auto; padding: 25px; width: 100%; text-align: left;">
+                        <div style="font-size: 1.3rem; margin-bottom: 5px;">📄</div>
+                        <div class="card-title">${p.meta.subject} - ${p.meta.level}</div>
+                        <div class="card-desc">${p.meta.chapter}</div>
+                        <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.5;">Generated on ${new Date(p.createdAt).toLocaleDateString()}</div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('qnario_current_user');
+        window.location.href = 'student-login.html';
+    }
+
+    const path = window.location.pathname;
+    if (path.includes('student-create-exam')) document.getElementById('menuCreateExam').classList.add('active');
+    if (path.includes('student-papers')) document.getElementById('menuPapers').classList.add('active');
+    if (path.includes('student-analysits')) document.getElementById('menuAnalytics').classList.add('active');
+
+    async function promptJoinQuiz() {
+        const code = prompt("Enter 6-digit Quiz Code:");
+        if(!code) return;
+
+        try {
+            const res = await fetch('/api/quizzes/join', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-email': user.email
+                },
+                body: JSON.stringify({ code: code.toUpperCase() })
+            });
+
+            if(!res.ok) {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+                return;
+            }
+
+            const data = await res.json();
+            window.location.href = `student-quiz-taker.html?id=${data.quizId}`;
+            
+        } catch(e) {
+            alert("Something went wrong joining the quiz.");
+        }
+    }
+</script>
+
+</body>
+</html>

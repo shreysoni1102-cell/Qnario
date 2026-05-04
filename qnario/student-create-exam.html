@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Qnario – Set Exam Paper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== BACKGROUND SYSTEM ===== */
+        .bg-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .gradient-mesh {
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            background:
+                radial-gradient(circle at 20% 30%, #667eea55, transparent 40%),
+                radial-gradient(circle at 80% 70%, #4facfe55, transparent 40%),
+                radial-gradient(circle at 50% 50%, #764ba255, transparent 40%);
+            filter: blur(120px);
+            animation: meshMove 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-5%, 5%) scale(1.1); }
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #4facfe);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        /* ===== LAYOUT ===== */
+        .wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 20px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 22px;
+            padding: 30px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            text-align: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        /* ===== FORM ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 20px;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        select,
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        select option {
+            color: black;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #4facfe);
+            transition: 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+
+        .success { color: #34d399; text-align: center; margin-top: 10px; }
+        .error { color: #f87171; text-align: center; margin-top: 10px; }
+
+        /* ===== CUSTOM ELEMENTS ===== */
+        .question-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .question-text {
+            flex-grow: 1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        @media(max-width:768px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-wrapper">
+        <div class="gradient-mesh"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="navbar">
+        <a href="student-dashboard.html" class="logo">Qnario</a>
+    </div>
+
+    <!-- MAIN BLUEPRINT FORM (MERGED) -->
+    <div class="wrapper">
+        <div class="container" id="blueprintContainer">
+            <h2>Set Exam Paper</h2>
+            <div class="form-grid">
+                <div>
+                    <label for="level">Level</label>
+                    <select id="level" required>
+                        <option value="">Select level...</option>
+                        <option value="11th">11th</option>
+                        <option value="12th">12th</option>
+                        <option value="UG">UG (Engineering & Technology)</option>
+                    </select>
+                </div>
+
+                <div id="streamGroup" style="display:none;">
+                    <label for="stream">Stream</label>
+                    <select id="stream">
+                        <option value="">Select stream...</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Computer Science Engineering (CSE)">Computer Science Engineering (CSE)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="subject">Subject</label>
+                    <input type="text" id="subject" placeholder="E.g. Computer Science" required>
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="specificTopics">Specific Topics (Optional)</label>
+                    <input type="text" id="specificTopics" placeholder="Any specific topics you want to cover...">
+                </div>
+
+                <div>
+                    <label for="structureSelect">Question Structure</label>
+                    <select id="structureSelect">
+                        <option value="Single Correct MCQ">Single Correct MCQ</option>
+                        <option value="Multiple Select Question (MSQ)">Multiple Select Question (MSQ)</option>
+                        <option value="Short Answer">Short Answer</option>
+                        <option value="Long Answer">Long Answer</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="marksSelect">Marks per Question</label>
+                    <select id="marksSelect">
+                        <option value="1M">1M</option>
+                        <option value="2M">2M</option>
+                        <option value="5M">5M</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="numQuestionsSelect">Number of questions</label>
+                    <input type="number" id="numQuestionsSelect" min="1" max="50" value="5">
+                </div>
+
+                <div>
+                    <label for="timerMinutes">Exam Timer (Minutes)</label>
+                    <input type="number" id="timerMinutes" min="5" max="240" value="30">
+                </div>
+            </div>
+
+            <button id="generateBtn" style="margin-top: 30px;">Generate Questions</button>
+            <div id="formStatus" class="error"></div>
+
+            <!-- Generated Questions List -->
+            <div id="genQuestionsArea" style="display:none; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>Generated Questions</h3>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:0;">
+                        <input type="checkbox" id="selectAllGen" style="width:18px; height:18px;">
+                        Select All
+                    </label>
+                </div>
+                <div id="genQuestionsList"></div>
+                <button id="savePaperBtn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top:20px;">Save to My Papers</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const levelSelect = document.getElementById('level');
+        const streamGroup = document.getElementById('streamGroup');
+        const streamSelect = document.getElementById('stream');
+        const subjectInput = document.getElementById('subject');
+        const specificTopicsInput = document.getElementById('specificTopics');
+        const timerMinutesInput = document.getElementById('timerMinutes');
+        const structureSelect = document.getElementById('structureSelect');
+        const marksSelect = document.getElementById('marksSelect');
+        const numQuestionsSelect = document.getElementById('numQuestionsSelect');
+
+        levelSelect.addEventListener('change', () => {
+            const level = levelSelect.value;
+            streamGroup.style.display = level === 'UG' ? 'block' : 'none';
+        });
+
+        let tempGeneratedQuestions = [];
+        
+        const generateBtn = document.getElementById('generateBtn');
+        const formStatus = document.getElementById('formStatus');
+        const genQuestionsArea = document.getElementById('genQuestionsArea');
+        const genQuestionsList = document.getElementById('genQuestionsList');
+        const selectAllGen = document.getElementById('selectAllGen');
+        const savePaperBtn = document.getElementById('savePaperBtn');
+
+        generateBtn.addEventListener('click', async () => {
+            const level = levelSelect.value;
+            const subject = subjectInput.value;
+            const topicsToGenerate = specificTopicsInput.value;
+            
+            // Validate required fields
+            if(!level || !subject || !topicsToGenerate) {
+                formStatus.textContent = '❌ Please select level, enter subject, and specify specific topics.';
+                return;
+            }
+
+            formStatus.textContent = `⏳ Generating questions...`;
+            generateBtn.disabled = true;
+
+            const structure = structureSelect.value;
+            const marks = marksSelect.value;
+            const numQ = parseInt(numQuestionsSelect.value);
+
+            try {
+                let questionType = 'Short Answer';
+                if (structure === 'Single Correct MCQ') questionType = 'MCQ';
+                else if (structure === 'Multiple Select Question (MSQ)') questionType = 'MSQ';
+                else if (structure === 'One-word Answer') questionType = 'One-word Answer';
+                else if (structure === 'True/False') questionType = 'True/False';
+                else if (structure === 'Short Answer') questionType = 'Short Answer';
+                else if (structure === 'Long Answer') questionType = 'Long Answer';
+
+                const r = await fetch('/api/generate-questions', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        topic: topicsToGenerate, 
+                        chapter: topicsToGenerate,
+                        numQuestions: numQ,
+                        subjectId: 'sub_' + subject,
+                        examId: 'exam_' + level,
+                        subjectName: subject,
+                        questionType: questionType,
+                        difficulty: 'Medium',
+                        marks: marks,
+                        level, stream: streamSelect.value,
+                        specificTopics: topicsToGenerate
+                    })
+                });
+
+                if(!r.ok) {
+                    const errorResponse = await r.json().catch(() => ({}));
+                    throw new Error(errorResponse.error || 'API Request Failed');
+                }
+
+                const data = await r.json();
+                tempGeneratedQuestions = data.questions || [];
+                
+                if(tempGeneratedQuestions.length === 0) throw new Error('No questions returned.');
+
+                renderGeneratedQuestions(tempGeneratedQuestions);
+                genQuestionsArea.style.display = 'block';
+                formStatus.textContent = '✅ Success. Please select questions to save.';
+            } catch (err) {
+                console.error('Generation Error:', err);
+                formStatus.textContent = `⚠️ AI failed (${err.message}). Showing sample questions.`;
+                
+                // Fallback Mock Questions
+                tempGeneratedQuestions = Array.from({length: numQ}, (_, i) => {
+                    const base = { marks: marks, type: structure };
+                    if (structure === 'Single Correct MCQ') {
+                        return { ...base, text: `[Sample] What is a primary concept of ${topicsToGenerate}?`, options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 'A' };
+                    } else if (structure === 'Multiple Select Question (MSQ)') {
+                        return { ...base, text: `[Sample] Select all that apply to ${topicsToGenerate}:`, options: ['Opt 1', 'Opt 2', 'Opt 3', 'Opt 4'], correctAnswers: ['A', 'C'] };
+                    } else {
+                        return { ...base, text: `[Sample] Explain the significance of ${topicsToGenerate} in ${subject}.`, answer: 'Sample answer content.' };
+                    }
+                });
+                renderGeneratedQuestions(tempGeneratedQuestions);
+                genQuestionsArea.style.display = 'block';
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+
+        function formatOption(opt) {
+            return typeof opt === 'string' ? opt : (opt.text || JSON.stringify(opt));
+        }
+
+        function renderGeneratedQuestions(qs) {
+            genQuestionsList.innerHTML = '';
+            qs.forEach((q, idx) => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.innerHTML = `
+                    <input type="checkbox" class="gen-check" data-idx="${idx}" checked>
+                    <div class="question-text">
+                        <strong>Q${idx+1}:</strong> ${q.text}<br>
+                        ${q.options ? `<small>${q.options.map((o,i)=>String.fromCharCode(65+i)+') '+formatOption(o)).join(' | ')}</small>` : ''}
+                    </div>
+                `;
+                genQuestionsList.appendChild(div);
+            });
+            selectAllGen.checked = true;
+        }
+
+        selectAllGen.addEventListener('change', (e) => {
+            document.querySelectorAll('.gen-check').forEach(chk => chk.checked = e.target.checked);
+        });
+
+        savePaperBtn.addEventListener('click', () => {
+            const user = JSON.parse(localStorage.getItem('qnario_current_user'));
+            if(!user) return alert('Please log in.');
+
+            const checks = document.querySelectorAll('.gen-check:checked');
+            if(checks.length === 0) return alert('Select at least one question.');
+            
+            const selectedQs = Array.from(checks).map(chk => tempGeneratedQuestions[chk.dataset.idx]);
+
+            const paper = {
+                id: 'paper_' + Date.now(),
+                createdAt: new Date().toISOString(),
+                meta: {
+                    level: levelSelect.value,
+                    subject: subjectInput.value,
+                    chapter: specificTopicsInput.value,
+                    topics: specificTopicsInput.value,
+                    timerMinutes: parseInt(timerMinutesInput.value),
+                    structure: structureSelect.value,
+                    marks: marksSelect.value
+                },
+                questions: selectedQs // Simplified to single list
+            };
+
+            const allPapers = JSON.parse(localStorage.getItem('qnario_student_papers') || '{}');
+            if(!allPapers[user.email]) allPapers[user.email] = [];
+            allPapers[user.email].push(paper);
+            localStorage.setItem('qnario_student_papers', JSON.stringify(allPapers));
+
+            alert('✅ Paper saved to "My Papers"!');
+            window.location.href = 'student-dashboard.html';
+        });
+    </script>
+</body>
+</html>
