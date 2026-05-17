@@ -18,12 +18,6 @@
       <img src="assets/live-proctoring.png" width="100%" alt="Live Proctoring Dashboard">
     </td>
   </tr>
-  <tr>
-    <td colspan="2" width="100%">
-      <p align="center"><b>📊 Interactive Student Analytics</b></p>
-      <img src="assets/student-analytics.png" width="100%" alt="Student Analytics Page">
-    </td>
-  </tr>
 </table>
 
 
