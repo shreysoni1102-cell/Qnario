@@ -1,6 +1,6 @@
 # 🎓 Qnario - Intelligent Exam Management Platform
 <p align="center">
-  <img src="assets/dashboard-preview.png" width="100%" alt="Qnario Dashboard Preview">
+  <img src="assets/qnario_linkedin_banner.png" width="100%" alt="Qnario AI Platform Banner">
 </p>
 
 ---
