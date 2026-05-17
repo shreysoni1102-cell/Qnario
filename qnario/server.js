@@ -12,6 +12,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 3000;
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // In-memory exam rooms, synced to file every 5s
 function readExamRooms() {
@@ -170,9 +171,48 @@ app.post('/api/login', async (req, res) => {
     }
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    // For legacy endpoints return basic user info; JWT auth is available under /api/auth
-    return res.json({ success: true, user: { email: user.email, role: user.role, name: user.name } });
+    
+    // Generate secure JWT
+    const token = jwt.sign(
+        { email: user.email, role: user.role, name: user.name },
+        process.env.JWT_SECRET || 'xK9#mP2$vL7nQ4wR8jY1uA6tD3sF5hG0',
+        { expiresIn: '24h' }
+    );
+
+    return res.json({ 
+        success: true, 
+        token,
+        user: { email: user.email, role: user.role, name: user.name } 
+    });
 });
+
+// JWT Verification Middleware
+function verifyToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        // Fallback to legacy x-user-email for offline/local stability
+        const legacyEmail = req.header('x-user-email');
+        if (legacyEmail) {
+            const users = readUsers();
+            const user = users.find(u => u.email === legacyEmail);
+            if (user) {
+                req.user = { email: user.email, role: user.role, name: user.name };
+                return next();
+            }
+        }
+        return res.status(401).json({ success: false, error: 'Access denied. No token provided.' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'xK9#mP2$vL7nQ4wR8jY1uA6tD3sF5hG0');
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, error: 'Invalid or expired token.' });
+    }
+}
 
 // Simple helper to get user from request headers (offline mode)
 function getUserFromHeaders(req) {
@@ -182,13 +222,16 @@ function getUserFromHeaders(req) {
     return users.find(u => u.email === email) || null;
 }
 
-// Require role middleware (offline)
+// Require role middleware (online with JWT + offline fallback)
 function requireRole(role) {
     return (req, res, next) => {
-        const user = getUserFromHeaders(req);
-        if (!user || user.role !== role) return res.status(403).json({ error: 'Forbidden: requires ' + role });
-        req.offlineUser = { email: user.email, name: user.name, role: user.role };
-        next();
+        verifyToken(req, res, () => {
+            if (!req.user || req.user.role !== role) {
+                return res.status(403).json({ success: false, error: 'Forbidden: requires ' + role });
+            }
+            req.offlineUser = req.user; // backward compatibility
+            next();
+        });
     };
 }
 
@@ -763,7 +806,7 @@ app.patch('/api/syllabus-papers/:id/question/:qNo', (req, res) => {
 // ============================================================
 
 // POST /api/exam-room/create  — Teacher creates a live exam room
-app.post('/api/exam-room/create', (req, res) => {
+app.post('/api/exam-room/create', verifyToken, (req, res) => {
     const { paperId, teacherEmail, duration } = req.body;
     if (!paperId || !teacherEmail) return res.status(400).json({ success: false, error: 'paperId and teacherEmail required' });
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -938,7 +981,7 @@ app.get('/api/exam-results/:resultId/insights', async (req, res) => {
 });
 
 // GET /api/exam-room/:code/monitor  — Teacher live dashboard data
-app.get('/api/exam-room/:code/monitor', (req, res) => {
+app.get('/api/exam-room/:code/monitor', verifyToken, (req, res) => {
     const room = examRooms[req.params.code];
     if (!room) return res.status(404).json({ success: false, error: 'Room not found' });
     const results = readResults();

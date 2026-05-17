@@ -255,6 +255,7 @@ document.getElementById('teacherLoginForm').onsubmit = async function(e) {
         const data = await res.json();
         if (data.success) {
             localStorage.setItem('qnario_current_user', JSON.stringify(data.user));
+            localStorage.setItem('qnario_token', data.token);
             window.location.href = 'teacher-dashboard.html';
         } else {
             errorMsg.innerText = data.error || 'Login failed.';

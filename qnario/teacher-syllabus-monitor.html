@@ -212,7 +212,9 @@ const submittedMap = {};
 async function loadMonitorData() {
     if (!roomCode) return;
     try {
-        const info = await fetch(`/api/exam-room/${roomCode}/monitor`).then(r=>r.json());
+        const info = await fetch(`/api/exam-room/${roomCode}/monitor`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('qnario_token')}` }
+        }).then(r=>r.json());
         if (info.success && info.room) {
             const serverStudents = info.room.students || {};
             Object.keys(serverStudents).forEach(sockId => {
@@ -246,7 +248,11 @@ async function createRoom() {
     if (!paperId) { showToast('Enter paper ID', 'warn'); return; }
 
     const resp = await fetch('/api/exam-room/create', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method:'POST', 
+        headers:{
+            'Content-Type':'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('qnario_token')}`
+        },
         body: JSON.stringify({ paperId, teacherEmail: user.email, duration })
     }).then(r=>r.json());
 
