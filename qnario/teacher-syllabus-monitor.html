@@ -284,7 +284,9 @@ function startExam() {
 
 function endExam() {
     if (!confirm('End the exam for all students?')) return;
-    showToast('Exam ended', 'info');
+    socket.emit('end_exam', { roomCode });
+    showToast('Exam ended for all students. Forcing auto-submit...', 'info');
+    document.querySelector('.btn-danger').disabled = true;
 }
 
 // ── SOCKET EVENTS ─────────────────────────────────────────

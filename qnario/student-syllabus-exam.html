@@ -240,6 +240,9 @@ socket.on('exam_started', ({ duration }) => {
     startExam();
 });
 socket.on('student_joined', d => { document.getElementById('waitStudents').textContent = 'Students: ' + (d.count || 1); });
+socket.on('force_end_exam', () => {
+    autoSubmit('Teacher ended the exam! Auto-submitting...');
+});
 
 // ── START EXAM ────────────────────────────────────────────
 function startExam() {
@@ -377,7 +380,19 @@ function confirmSubmit() {
     submitPaper();
 }
 
-function autoSubmit() { showToast('Time up! Auto-submitting...', 'warn'); setTimeout(submitPaper, 1500); }
+function autoSubmit(msg = 'Time up! Auto-submitting...') { 
+    clearInterval(timer);
+    showToast(msg, 'warn'); 
+    
+    // Disable interface so they cannot change anything
+    const qa = document.getElementById('questionArea');
+    if (qa) {
+        qa.style.pointerEvents = 'none';
+        qa.style.opacity = '0.5';
+    }
+    
+    setTimeout(submitPaper, 1500); 
+}
 
 async function submitPaper() {
     clearInterval(timer);

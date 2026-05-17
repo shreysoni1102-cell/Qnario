@@ -1044,6 +1044,14 @@ io.on('connection', (socket) => {
         console.log('[Socket] Exam started in room:', roomCode);
     });
 
+    // Teacher ends exam
+    socket.on('end_exam', ({ roomCode }) => {
+        const room = examRooms[roomCode];
+        if (!room) return;
+        io.to('exam_' + roomCode).emit('force_end_exam');
+        console.log('[Socket] Exam force ended by teacher in room:', roomCode);
+    });
+
     // Anomaly alert (tab switch, idle)
     socket.on('anomaly', ({ roomCode, type }) => {
         const room = examRooms[roomCode];
