@@ -226,13 +226,13 @@ app.post('/api/exams/:id/submit', (req, res) => {
 app.post('/api/quizzes/create', requireRole('teacher'), (req, res) => {
     const { title, subject, topics, duration, difficulty, questions } = req.body;
     if (!title || !Array.isArray(questions)) return res.status(400).json({ error: 'Invalid payload' });
-    
+
     const exams = readExams();
     const id = 'quiz_' + Date.now().toString();
     const quizCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
+
     exams.push({
-        id, isQuiz: true, quizCode, title, subject, topics, 
+        id, isQuiz: true, quizCode, title, subject, topics,
         duration, difficulty, questions,
         createdBy: req.offlineUser.email, createdAt: new Date()
     });
@@ -244,18 +244,18 @@ app.post('/api/quizzes/create', requireRole('teacher'), (req, res) => {
 app.post('/api/quizzes/join', (req, res) => {
     const user = getUserFromHeaders(req);
     if (!user) return res.status(401).json({ error: 'Provide x-user-email header to identify user' });
-    
+
     const { code } = req.body;
     const exams = readExams();
     const quiz = exams.find(e => e.quizCode === code && e.isQuiz);
-    
+
     if (!quiz) return res.status(404).json({ error: 'Invalid Quiz Code' });
-    
+
     const results = readResults();
     if (results.some(r => r.examId === quiz.id && r.user === user.email)) {
         return res.status(400).json({ error: 'You have already attempted this quiz.' });
     }
-    
+
     res.json({ success: true, quizId: quiz.id });
 });
 
@@ -263,22 +263,22 @@ app.post('/api/quizzes/join', (req, res) => {
 app.post('/api/quizzes/:id/submit', (req, res) => {
     const user = getUserFromHeaders(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    
+
     const { answers } = req.body; // [{ questionId, answer, timeSpent }]
     const exams = readExams();
     const quiz = exams.find(e => e.id === req.params.id);
     if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
-    
+
     let score = 0;
     const topicStats = {};
     const detailedAnswers = [];
-    
+
     if (Array.isArray(answers)) {
         for (const a of answers) {
             const q = quiz.questions.find(x => (x.id === a.questionId) || (x._id === a.questionId));
             let isCorrect = false;
             let topic = "General";
-            
+
             if (q) {
                 topic = q.topicName || q.subjectName || "General";
                 if (String(a.answer) === String(q.answer?.correctOption || q.answer)) {
@@ -286,11 +286,11 @@ app.post('/api/quizzes/:id/submit', (req, res) => {
                     score++;
                 }
             }
-            
+
             if (!topicStats[topic]) topicStats[topic] = { total: 0, correct: 0 };
             topicStats[topic].total++;
             if (isCorrect) topicStats[topic].correct++;
-            
+
             detailedAnswers.push({
                 questionId: a.questionId,
                 answer: a.answer,
@@ -300,7 +300,7 @@ app.post('/api/quizzes/:id/submit', (req, res) => {
             });
         }
     }
-    
+
     const results = readResults();
     const resultObj = {
         id: 'res_' + Date.now().toString(),
@@ -313,10 +313,10 @@ app.post('/api/quizzes/:id/submit', (req, res) => {
         detailedAnswers,
         submittedAt: new Date()
     };
-    
+
     results.push(resultObj);
     writeResults(results);
-    
+
     res.json({ success: true, resultId: resultObj.id });
 });
 
@@ -331,7 +331,7 @@ app.get('/api/quizzes/result/:id', (req, res) => {
 app.get('/api/quizzes/analytics', requireRole('teacher'), (req, res) => {
     const exams = readExams().filter(e => e.createdBy === req.offlineUser.email && e.isQuiz);
     const results = readResults();
-        
+
     let totalAttempts = 0;
     let totalScore = 0;
     let totalPossible = 0;
@@ -344,15 +344,15 @@ app.get('/api/quizzes/analytics', requireRole('teacher'), (req, res) => {
             totalAttempts++;
             totalScore += r.score;
             totalPossible += (r.totalQuestions || quiz.questions.length);
-            
+
             if (r.topicStats) {
                 Object.keys(r.topicStats).forEach(topic => {
-                    if(!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
+                    if (!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
                     topicStats[topic].correct += r.topicStats[topic].correct;
                     topicStats[topic].total += r.topicStats[topic].total;
                 });
             }
-            
+
             recentAttempts.push({
                 student: r.user,
                 quizTitle: quiz.title,
@@ -365,14 +365,14 @@ app.get('/api/quizzes/analytics', requireRole('teacher'), (req, res) => {
     });
 
     const averageAccuracy = totalPossible > 0 ? (totalScore / totalPossible) * 100 : 0;
-    
+
     // Sort topics by accuracy (weakest first)
     const sortedTopics = Object.keys(topicStats).map(t => {
         const acc = (topicStats[t].correct / topicStats[t].total) * 100;
         return { name: t, accuracy: acc, totalAttempts: topicStats[t].total };
-    }).sort((a,b) => a.accuracy - b.accuracy);
-    
-    recentAttempts.sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    }).sort((a, b) => a.accuracy - b.accuracy);
+
+    recentAttempts.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
     res.json({
         totalQuizzes: exams.length,
@@ -562,12 +562,13 @@ app.post('/api/syllabus/:id/generate', async (req, res) => {
         // FIXED: Build a per-unit topic list so we can distribute questions across ALL units
         const allUnits = syllabus.extractedTopics || [];
         const unitTopicLines = allUnits.map(u => ({
-            unitName: u.unit || 'Unit',
-            lines: (u.chapters || []).flatMap(c =>
-                (selectedChapters && selectedChapters.length > 0 && !selectedChapters.includes(c.chapter))
+            unitName: u.unitName || u.unit || 'Unit',
+            lines: (u.chapters || []).flatMap(c => {
+                const chapterName = c.chapterName || c.chapter || 'Chapter';
+                return (selectedChapters && selectedChapters.length > 0 && !selectedChapters.includes(chapterName))
                     ? []
-                    : (c.topics || []).map(t => `${u.unit} > ${c.chapter} > ${t}`)
-            )
+                    : (c.topics || []).map(t => `${u.unitName || u.unit} > ${chapterName} > ${t}`);
+            })
         })).filter(u => u.lines.length > 0);
 
         // Full flat topic list (used as fallback)
@@ -875,12 +876,12 @@ app.get('/api/exam-results/:resultId/insights', async (req, res) => {
         const results = readResults();
         const r = results.find(x => x.id === req.params.resultId);
         if (!r) return res.status(404).json({ success: false, error: 'Result not found' });
-        
+
         // Find subject from paper
         const papers = readSyllabusPapers();
         const paper = papers.find(p => p.id === r.paperId);
         const subject = paper ? paper.subject : 'General';
-        
+
         // Call Python Microservice
         const MICROSERVICE_URL = process.env.AI_MICROSERVICE_URL || 'http://localhost:5000';
         try {
@@ -890,15 +891,15 @@ app.get('/api/exam-results/:resultId/insights', async (req, res) => {
                 subject: subject,
                 chapterStats: r.chapterStats
             });
-            
+
             if (aiResp.data && aiResp.data.success) {
                 return res.json({ success: true, suggestions: aiResp.data.suggestions });
             }
         } catch (e) {
             console.error('Microservice error:', e.message);
             // Fallback string if microservice fails or quota exceeded
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 suggestions: [
                     "We're currently unable to generate personalized AI insights.",
                     "Review the chapters marked 'Needs Work' carefully.",
@@ -907,7 +908,7 @@ app.get('/api/exam-results/:resultId/insights', async (req, res) => {
                 fallback: true
             });
         }
-        
+
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }

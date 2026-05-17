@@ -277,7 +277,8 @@ function renderNavMap() {
 function showQuestion(idx) {
     currentQ = idx;
     const q = paper.questions[idx];
-    const isShort = q.type==='Short'||q.type==='Long'||q.type==='Descriptive';
+    const qType = (q.type || 'MCQ').toLowerCase();
+    const isShort = qType.includes('short') || qType.includes('long') || qType.includes('descriptive') || qType.includes('word') || qType.includes('essay') || qType.includes('case');
     const savedAns = answers[q.questionNo] || '';
 
     document.getElementById('questionArea').innerHTML = `
@@ -290,7 +291,13 @@ function showQuestion(idx) {
             <div class="q-text">Q${q.questionNo||idx+1}. ${q.text}</div>
             ${isShort
                 ? `<textarea class="short-answer" id="ansInput" placeholder="Write your answer here..." onchange="saveAnswer(${q.questionNo},this.value)">${savedAns}</textarea>`
-                : `<div class="options-grid">${(q.options||[]).map((opt,oi)=>`<button class="option-btn ${savedAns===opt.charAt(0)?'selected':''}" onclick="selectOption(${q.questionNo},'${opt.charAt(0)}',this)">${opt}</button>`).join('')}</div>`
+                : `<div class="options-grid">${(q.options||[]).map((opt,oi)=>{
+                    const optText = typeof opt === 'string' ? opt : (opt.text || opt.label || JSON.stringify(opt));
+                    const optVal = typeof opt === 'string' ? opt : (opt.value || opt.text || opt.label || JSON.stringify(opt));
+                    const optLetter = String.fromCharCode(65 + oi); // A, B, C...
+                    const isSelected = savedAns === optVal || savedAns === optLetter;
+                    return `<button class="option-btn ${isSelected?'selected':''}" onclick="selectOption(${q.questionNo},'${optVal.replace(/'/g, "\\'")}',this)">${optText}</button>`;
+                }).join('')}</div>`
             }
             <div class="q-footer">
                 <button class="btn-sm btn-outline" onclick="clearAnswer(${q.questionNo})">Clear Answer</button>
@@ -305,8 +312,8 @@ function showQuestion(idx) {
     updateProgress();
 }
 
-function selectOption(qNo, letter, btn) {
-    answers[qNo] = letter;
+function selectOption(qNo, val, btn) {
+    answers[qNo] = val;
     btn.closest('.options-grid').querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
     btn.classList.add('selected');
     emitProgress();
@@ -330,11 +337,29 @@ function emitProgress() {
 
 // ── ANTI-CHEAT ────────────────────────────────────────────
 function setupAntiCheat() {
+    // Visibility change (tab switch)
     document.addEventListener('visibilitychange', () => {
-        if(document.hidden) { socket.emit('anomaly', { roomCode, type: 'tab_switch' }); showToast('⚠️ Tab switch detected & reported!', 'warn'); }
+        if(document.hidden) { 
+            socket.emit('anomaly', { roomCode, type: 'tab_switch' }); 
+            showToast('⚠️ Tab switch detected & reported!', 'warn'); 
+        }
     });
+
+    // Window blur (clicking outside or switching apps)
+    window.addEventListener('blur', () => {
+        socket.emit('anomaly', { roomCode, type: 'window_blur' });
+        showToast('⚠️ Window focus lost! Stay on this page.', 'warn');
+    });
+
+    // Idle detection
     let idleTimer;
-    document.addEventListener('mousemove', () => { clearTimeout(idleTimer); idleTimer=setTimeout(()=>socket.emit('anomaly',{roomCode,type:'idle_30s'}),30000); });
+    const resetIdle = () => { 
+        clearTimeout(idleTimer); 
+        idleTimer = setTimeout(() => socket.emit('anomaly', { roomCode, type: 'idle_30s' }), 30000); 
+    };
+    document.addEventListener('mousemove', resetIdle);
+    document.addEventListener('keydown', resetIdle);
+    resetIdle();
 }
 
 // ── SUBMIT ────────────────────────────────────────────────

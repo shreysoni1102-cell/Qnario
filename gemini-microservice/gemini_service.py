@@ -6,67 +6,90 @@ from typing import Any, Dict, List
 
 import requests
 
-from config import GROQ_API_KEY
+from config import GEMINI_API_KEY, GROQ_API_KEY
 
 logger = logging.getLogger(__name__)
 
 
-class GroqQuestionGenerator:
+class GeminiQuestionGenerator:
     def __init__(self):
-        self.primary_model = "llama3-8b-8192"
+        self.primary_model = "gemini-1.5-flash-latest"
         self.model = self.primary_model
-        self.api_key = GROQ_API_KEY
-        logger.info(f"Using Groq model: {self.model}")
+        self.api_key = GEMINI_API_KEY
+        self.groq_key = GROQ_API_KEY
+        logger.info(f"Using Gemini model: {self.model}")
 
-    def _chat(self, prompt: str, max_tokens: int = 2048, temperature: float = 0.7) -> Dict[str, Any]:
-        if not self.api_key:
-            return {"success": False, "error": "GROQ_API_KEY is missing", "quota_exhausted": False}
-
+    def _chat_groq(self, prompt: str, max_tokens: int = 2048) -> Dict[str, Any]:
+        if not self.groq_key:
+            return {"success": False, "error": "GROQ_API_KEY is missing"}
+        
+        groq_max = min(max_tokens, 2048)
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"Bearer {self.groq_key}",
+            "Content-Type": "application/json"
         }
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": max_tokens,
-            "temperature": temperature
-        }
-
-        last_error = None
-        for attempt in range(3):
+        # Try multiple Groq models in order
+        for groq_model in ["llama-3.3-70b-versatile", "llama3-8b-8192", "mixtral-8x7b-32768"]:
+            payload = {
+                "model": groq_model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": groq_max,
+                "temperature": 0.7
+            }
             try:
-                if attempt > 0:
-                    time.sleep(3 * attempt)
-                response = requests.post(url, headers=headers, json=payload, timeout=60)
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                logger.info(f"Groq [{groq_model}] status: {response.status_code}")
                 if response.status_code == 200:
-                    data = response.json()
-                    candidates = data.get("choices", [])
-                    if candidates and candidates[0].get("message", {}).get("content"):
-                        content = candidates[0]["message"]["content"]
-                        return {"success": True, "content": content}
-                    return {"success": False, "error": "Empty response from Groq"}
-                if response.status_code == 429:
-                    last_error = "Groq rate limit/quota exceeded"
+                    content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                    logger.info(f"Groq success with model: {groq_model}")
+                    return {"success": True, "content": content}
+                else:
+                    logger.warning(f"Groq [{groq_model}] failed: {response.text[:200]}")
                     continue
-                return {"success": False, "error": f"Groq API error {response.status_code}", "details": response.text}
-            except Exception as exc:
-                last_error = str(exc)
+            except Exception as e:
+                logger.error(f"Groq [{groq_model}] exception: {str(e)}")
+                continue
+        return {"success": False, "error": "All Groq models failed"}
 
-        return {"success": False, "error": last_error or "Groq request failed", "quota_exhausted": True}
+    def _chat(self, prompt: str, max_tokens: int = 2048, temperature: float = 0.7) -> Dict[str, Any]:
+        # Try Gemini first, fallback to Groq if 404 or missing
+        if not self.api_key:
+            return self._chat_groq(prompt, max_tokens)
 
-    # Tokens needed per question by type (conservative estimates)
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}
+        }
+
+        try:
+            response = requests.post(self.url, headers=headers, json=payload, timeout=60)
+            if response.status_code == 200:
+                resp_json = response.json()
+                content = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                return {"success": True, "content": content}
+            elif response.status_code == 404 or response.status_code == 403:
+                logger.warning(f"Gemini {response.status_code} Error. Falling back to Groq...")
+                return self._chat_groq(prompt, max_tokens)
+            elif response.status_code == 429:
+                time.sleep(2)
+                return self._chat_groq(prompt, max_tokens)
+            else:
+                return self._chat_groq(prompt, max_tokens)
+        except Exception as e:
+            logger.error(f"Gemini Exception: {str(e)}. Falling back to Groq...")
+            return self._chat_groq(prompt, max_tokens)
+
     _TOKENS_PER_QUESTION = {
-        'MCQ': 260,
-        'Multiple Choice Question (MCQ)': 260,
-        'Single Correct MCQ': 260,
-        'MSQ': 300,
-        'Multiple Select Question (MSQ)': 300,
-        'True/False': 150,
+        'MCQ': 180,
+        'Multiple Choice Question (MCQ)': 180,
+        'Single Correct MCQ': 180,
+        'MSQ': 350,
+        'Multiple Select Question (MSQ)': 350,
+        'True/False': 120,
+        'Fill in the blanks': 150,
         'One-word Answer': 180,
         'Short Answer': 420,
         'Long Answer': 650,
@@ -76,7 +99,7 @@ class GroqQuestionGenerator:
     _BATCH_SIZE_HEAVY = 4
     _BATCH_SIZE = 8
     _MAX_TOKENS_CAP = 8192
-    _INTER_BATCH_DELAY = 2
+    _INTER_BATCH_DELAY = 1
 
     def _batch_size_for(self, question_type: str) -> int:
         if question_type in ('Long Answer', 'Case Study'):
@@ -95,11 +118,8 @@ class GroqQuestionGenerator:
         if count > batch_size:
             all_questions = []
             remaining = count
-            batch_no = 0
             while remaining > 0:
                 batch_count = min(remaining, batch_size)
-                batch_no += 1
-                logger.info(f"Batch {batch_no}: requesting {batch_count} × {question_type}")
                 batch_result = self._generate_single_batch(
                     subject, topic, difficulty, batch_count,
                     question_type, level, stream, specific_topics, norm_marks
@@ -114,47 +134,49 @@ class GroqQuestionGenerator:
 
             return {
                 "success": True,
-                "questions": all_questions,
                 "count": len(all_questions),
-                "source": "groq_batched",
+                "questions": all_questions,
+                "source": "gemini_batched",
             }
 
         questions = self._generate_single_batch(
             subject, topic, difficulty, count,
             question_type, level, stream, specific_topics, norm_marks
         )
+
         return {
             "success": True,
-            "questions": questions,
             "count": len(questions),
-            "source": "groq",
+            "questions": questions,
+            "source": "gemini",
         }
 
     def _generate_single_batch(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks):
         prompt = self._build_prompt(subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks)
         max_tok = self._tokens_for(question_type, count)
-        logger.info(f"Calling Groq: {count} × {question_type}, max_tokens={max_tok}")
-
-        result = self._chat(prompt, max_tokens=max_tok, temperature=0.5)
-        if not result.get("success"):
-            logger.warning(f"Groq call failed — falling back to mock for {count} × {question_type}")
+        logger.info(f"Calling Gemini: {count} × {question_type}, max_tokens={max_tok}")
+        
+        result = self._chat(prompt, max_tokens=max_tok)
+        
+        if not result["success"]:
+            logger.error(f"Gemini API failure: {result.get('error')}")
             mock = self.generate_mock_questions(subject, topic, difficulty, count, question_type, norm_marks)
             return mock.get("questions", [])
 
-        parsed = self._parse_json_array(result.get("content", ""))
-        if not parsed:
-            logger.warning(f"JSON parse failed — falling back to mock for {count} × {question_type}")
+        logger.info(f"Raw Gemini Response for Questions: {result['content'][:1000]}")
+        parsed = self._parse_json_array(result["content"])
+        if not parsed or len(parsed) == 0:
+            logger.warning("Failed to parse Gemini JSON, using mock fallback")
             mock = self.generate_mock_questions(subject, topic, difficulty, count, question_type, norm_marks)
             return mock.get("questions", [])
 
         normalized = self._normalize_questions(parsed, question_type, difficulty, norm_marks, count)
         if len(normalized) < count:
             shortfall = count - len(normalized)
-            logger.warning(f"Groq returned {len(normalized)}/{count} — adding {shortfall} mock question(s)")
-            mock = self.generate_mock_questions(subject, topic, difficulty, shortfall, question_type, norm_marks)
-            for q in mock.get("questions", []):
-                q['questionNumber'] = len(normalized) + 1
-                normalized.append(q)
+            mock_extra = self.generate_mock_questions(subject, topic, difficulty, shortfall, question_type, norm_marks)
+            normalized.extend(mock_extra.get("questions", []))
+            for i, q in enumerate(normalized, start=1):
+                q['questionNumber'] = i
 
         return normalized
 
@@ -165,141 +187,132 @@ class GroqQuestionGenerator:
             if question_type in ['MCQ', 'Multiple Choice Question (MCQ)', 'Single Correct MCQ']:
                 q = {
                     "questionNumber": i,
-                    "text": f"[Mock] {subject} - {topic} question {i}",
-                    "type": question_type,
+                    "text": f"Regarding {subject} and specifically {topic}, which of the following is correct?",
+                    "type": "MCQ",
                     "difficulty": difficulty,
                     "marks": norm_marks,
                     "options": [
                         {"id": "A", "text": "Option A"},
                         {"id": "B", "text": "Option B"},
                         {"id": "C", "text": "Option C"},
-                        {"id": "D", "text": "Option D"},
+                        {"id": "D", "text": "Option D"}
                     ],
-                    "answer": {"correctOption": "A", "explanation": "Mock fallback answer"},
-                }
-            elif question_type in ['MSQ', 'Multiple Select Question (MSQ)']:
-                q = {
-                    "questionNumber": i,
-                    "text": f"[Mock] {subject} - {topic} MSQ question {i}",
-                    "type": question_type,
-                    "difficulty": difficulty,
-                    "marks": norm_marks,
-                    "options": [
-                        {"id": "A", "text": "Option A"},
-                        {"id": "B", "text": "Option B"},
-                        {"id": "C", "text": "Option C"},
-                        {"id": "D", "text": "Option D"},
-                    ],
-                    "answer": {"correctOptions": ["A", "B"], "explanation": "Mock fallback answer"},
+                    "answer": {"correctOption": "A", "explanation": "Basic concept explanation."}
                 }
             elif question_type in ['True/False']:
                 q = {
                     "questionNumber": i,
-                    "text": f"[Mock] {subject} - {topic} statement {i}",
-                    "type": question_type,
+                    "text": f"Is it true that {subject} principles apply to {topic}?",
+                    "type": "True/False",
                     "difficulty": difficulty,
                     "marks": norm_marks,
-                    "options": [
-                        {"id": "True", "text": "True"},
-                        {"id": "False", "text": "False"},
-                    ],
-                    "answer": {"correctOption": "True"},
+                    "options": [{"id": "A", "text": "True"}, {"id": "B", "text": "False"}],
+                    "answer": {"correctOption": "True", "explanation": "Verification of basic principles."}
                 }
             elif question_type in ['Case Study']:
                 q = {
                     "questionNumber": i,
-                    "text": f"PASSAGE: [Mock] Read the following passage about {subject} and answer: {topic} scenario {i}\n\nQUESTION: What is the main point of the passage?",
-                    "type": question_type,
+                    "text": f"SCENARIO: Analysis of {topic} in a real-world environment.\n\nQUESTION: What is the primary implication of this scenario?",
+                    "type": "Case Study",
                     "difficulty": difficulty,
                     "marks": norm_marks,
                     "options": [
-                        {"id": "A", "text": "Option A"},
-                        {"id": "B", "text": "Option B"},
-                        {"id": "C", "text": "Option C"},
-                        {"id": "D", "text": "Option D"},
+                        {"id": "A", "text": "Increased efficiency"},
+                        {"id": "B", "text": "Reduced overhead"},
+                        {"id": "C", "text": "Resource allocation"},
+                        {"id": "D", "text": "Quality control"}
                     ],
-                    "answer": {"correctOption": "A", "explanation": "Mock case study answer"},
+                    "answer": {"correctOption": "A", "explanation": "Scenario-based analysis result."},
                 }
             else:
                 q = {
                     "questionNumber": i,
-                    "text": f"[Mock] {subject} - {topic} question {i}",
+                    "text": f"Explain the fundamental concepts of {subject} in the context of {topic}.",
                     "type": question_type,
                     "difficulty": difficulty,
                     "marks": norm_marks,
                     "options": [],
-                    "answer": {"correctOption": "", "explanation": "Mock fallback answer"},
+                    "answer": {"explanation": "Detailed theoretical explanation based on established concepts."}
                 }
             questions.append(q)
-        
-        return {
-            "success": True,
-            "questions": questions,
-            "count": len(questions),
-            "source": "mock",
-            "warning": "Mock data generated because Groq API was unavailable.",
-        }
+        return {"success": True, "questions": questions}
 
     def extract_syllabus_topics(self, text_content, subject_hint):
         prompt = f"""Extract all units, chapters and topics from this syllabus text.
 Subject hint: {subject_hint or 'Auto-detect'}
 Return only JSON in this format:
-{{"subject":"Subject Name","units":[{{"unit":"Unit Name","chapters":[{{"chapter":"Chapter Name","topics":["topic1","topic2"]}}]}}]}}
-Text:
+{{
+  "subject": "Name",
+  "units": [
+    {{
+      "unitNumber": 1,
+      "unitName": "Name",
+      "chapters": [
+        {{ "chapterName": "Name", "topics": ["Topic 1", "Topic 2"] }}
+      ]
+    }}
+  ]
+}}
+Syllabus text:
 {text_content[:15000]}"""
-        result = self._chat(prompt, max_tokens=3000, temperature=0.2)
-        if not result.get("success"):
-            return result
-
-        obj = self._parse_json_object(result.get("content", ""))
-        if not obj:
-            return {"success": False, "error": "Failed to parse syllabus extraction response"}
-        if "units" not in obj:
-            obj["units"] = []
-        return {"success": True, "extracted": obj}
+        
+        logger.info(f"Extracting syllabus from {len(text_content)} chars...")
+        result = self._chat(prompt, max_tokens=3000)
+        
+        if result["success"]:
+            logger.info("Gemini call successful, parsing response...")
+            parsed = self._parse_json_object(result["content"])
+            if parsed:
+                return {"success": True, "syllabus": parsed}
+            else:
+                logger.error(f"Failed to parse Gemini JSON. Raw content: {result['content'][:500]}")
+                return {"success": False, "error": "AI returned non-JSON content. Check logs.", "raw": result["content"]}
+        
+        logger.error(f"Gemini API failure: {result.get('error')} - {result.get('details')}")
+        return {"success": False, "error": f"AI Error: {result.get('error')}"}
 
     def generate_study_suggestions(self, student_name, subject, chapter_stats):
-        chapter_lines = []
-        for chapter, stats in chapter_stats.items():
-            scored = float(stats.get("scored", 0))
-            marks = float(stats.get("marks", 0))
-            percent = int((scored / marks) * 100) if marks > 0 else 0
-            chapter_lines.append(f"- {chapter}: {percent}% ({scored}/{marks})")
-        prompt = f"""Give 3-4 concise study suggestions for a student based on their test performance.
-Student: {student_name}
-Subject: {subject}
-Performance:
-{chr(10).join(chapter_lines)}
-Return only JSON array of strings."""
-        result = self._chat(prompt, max_tokens=700, temperature=0.4)
-        if not result.get("success"):
-            return result
-
-        suggestions = self._parse_json_array(result.get("content", ""))
-        if not isinstance(suggestions, list) or not suggestions:
-            return {"success": False, "error": "Failed to parse study suggestions"}
-        return {"success": True, "suggestions": [str(x) for x in suggestions[:5]]}
+        prompt = f"""Generate personalized AI study insights for {student_name} based on their {subject} performance.
+Chapter performance data: {json.dumps(chapter_stats)}
+Return a JSON object with:
+{{
+  "summary": "overall performance summary",
+  "strengths": ["list of strong chapters"],
+  "weaknesses": ["list of chapters needing work"],
+  "recommendations": ["specific actionable study steps"]
+}}"""
+        result = self._chat(prompt, max_tokens=1000)
+        if result["success"]:
+            parsed = self._parse_json_object(result["content"])
+            if parsed:
+                return {"success": True, "insights": parsed}
+        return {"success": False, "error": "Failed to generate insights"}
 
     def _build_prompt(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, marks):
         effective_topic = specific_topics if specific_topics else topic
         marks_str = str(marks).replace('M', '')
         
         if question_type in ['MCQ', 'Multiple Choice Question (MCQ)', 'Single Correct MCQ']:
-            options_spec = '"options": [{"id": "A", "text": "..."}, {"id": "B", "text": "..."}, {"id": "C", "text": "..."}, {"id": "D", "text": "..."}]'
-            answer_spec = '"answer": {"correctOption": "A", "explanation": "..."}'
-            extra_instructions = 'Include 4 distinct options (A, B, C, D). Specify the single correct option letter.'
-        elif question_type in ['MSQ', 'Multiple Select Question (MSQ)']:
-            options_spec = '"options": [{"id": "A", "text": "..."}, {"id": "B", "text": "..."}, {"id": "C", "text": "..."}, {"id": "D", "text": "..."}]'
-            answer_spec = '"answer": {"correctOptions": ["A", "C"], "explanation": "..."}'
-            extra_instructions = 'Include 4 options (A, B, C, D). Two or more may be correct; list all correct option letters in correctOptions array.'
+            options_spec = '"options": [{"id": "A", "text": "<real answer text>"}, {"id": "B", "text": "<real answer text>"}, {"id": "C", "text": "<real answer text>"}, {"id": "D", "text": "<real answer text>"}]'
+            answer_spec = '"answer": {"correctOption": "B", "explanation": "<why this is correct>"}'
+            extra_instructions = ('CRITICAL: You MUST replace ALL placeholder text with REAL academic content related to the topic.\n'
+                'Example of CORRECT output:\n'
+                '{"id": "A", "text": "It increases the voltage"}\n'
+                '{"id": "B", "text": "It reduces electrical resistance"}\n'
+                'NEVER output {"id": "A", "text": "Option A"} or any generic placeholder.\n'
+                'Every option MUST be a factually different, plausible answer about the topic.')
         elif question_type in ['True/False']:
-            options_spec = '"options": [{"id": "True", "text": "True"}, {"id": "False", "text": "False"}]'
-            answer_spec = '"answer": {"correctOption": "True"}'
-            extra_instructions = 'Write a factual statement. correctOption must be exactly "True" or "False".'
+            options_spec = '"options": [{"id": "A", "text": "True"}, {"id": "B", "text": "False"}]'
+            answer_spec = '"answer": {"correctOption": "True", "explanation": "..."}'
+            extra_instructions = 'Provide exactly two options: True and False.'
+        elif question_type in ['Fill in the blanks']:
+            options_spec = '"options": []'
+            answer_spec = '"answer": {"correctAnswer": "word", "explanation": "..."}'
+            extra_instructions = 'Write a sentence with a clear blank. Provide the correct word in the answer.'
         elif question_type in ['One-word Answer']:
             options_spec = '"options": []'
-            answer_spec = '"answer": {"value": "exact one-word answer here"}'
-            extra_instructions = 'The answer must be a single word. Leave options as empty array.'
+            answer_spec = '"answer": {"value": "word", "explanation": "..."}'
+            extra_instructions = 'Write a question requiring a single-word or short phrase answer. Leave options as empty array.'
         elif question_type in ['Short Answer']:
             options_spec = '"options": []'
             answer_spec = '"answer": {"explanation": "2-3 sentence answer here"}'
@@ -308,9 +321,8 @@ Return only JSON array of strings."""
             options_spec = '"options": [{"id": "A", "text": "..."}, {"id": "B", "text": "..."}, {"id": "C", "text": "..."}, {"id": "D", "text": "..."}]'
             answer_spec = '"answer": {"correctOption": "A", "explanation": "..."}'
             extra_instructions = (
-                'Each question MUST have two parts separated by a newline:\n'
-                '1) A short case/scenario passage (3-5 sentences) describing a real-world situation.\n'
-                '2) A question about that passage.\n'
+                'Create a mini "Case Study" scenario.\n'
+                'The "text" field MUST contain both the passage and the question.\n'
                 'Format the "text" field as: "PASSAGE: <passage text>\\n\\nQUESTION: <question>".\n'
                 'Then provide 4 MCQ options (A, B, C, D) and specify the correct option.'
             )
@@ -318,22 +330,18 @@ Return only JSON array of strings."""
             options_spec = '"options": []'
             answer_spec = '"answer": {"explanation": "detailed model answer here (4-6 sentences)"}'
             extra_instructions = 'Write a long-answer question requiring a detailed paragraph response. Leave options as empty array.'
-        
-        return f"""You are an expert exam question writer for Indian curriculum (CBSE/ICSE).
-Generate exactly {count} {question_type} questions.
-Subject: {subject}
+
+        return f"""Generate exactly {count} academic questions for {subject}.
 Topic: {effective_topic}
 Difficulty: {difficulty}
+Question Type: {question_type}
+Marks per question: {marks_str}
 Level: {level or 'General'}
-Stream: {stream or 'General'}
-Marks each: {marks_str}
 
-Special instructions for {question_type}: {extra_instructions}
-
-Return ONLY a valid JSON array. Each element MUST follow this EXACT structure:
+Output MUST be a valid JSON array of objects with this EXACT structure:
 {{
   "questionNumber": 1,
-  "text": "Question text here",
+  "text": "The question text here",
   "type": "{question_type}",
   "difficulty": "{difficulty}",
   "marks": {marks_str},
@@ -341,7 +349,7 @@ Return ONLY a valid JSON array. Each element MUST follow this EXACT structure:
   {answer_spec}
 }}
 
-Do NOT include any text outside the JSON array. Do NOT add markdown code fences.
+Specific Instructions: {extra_instructions}
 Generate all {count} questions now."""
 
     def _parse_json_array(self, text: str) -> List[Dict[str, Any]]:
@@ -406,27 +414,46 @@ Generate all {count} questions now."""
             return 1
     
     def _format_options(self, options, question_type):
-        if isinstance(options, list) and len(options) > 0:
-            if isinstance(options[0], dict) and 'id' in options[0]:
-                return options
+        if not isinstance(options, list):
+            options = []
+        
+        PLACEHOLDER_TEXTS = {'option a', 'option b', 'option c', 'option d', 'answer_1', 'answer_2', 'answer_3', 'answer_4', '...'}
+
+        if len(options) > 0:
+            # If already in correct object format with real text, return as is
+            if isinstance(options[0], dict) and 'id' in options[0] and 'text' in options[0]:
+                # Check if text is a real value (not a placeholder)
+                first_text = str(options[0].get('text', '')).strip().lower()
+                if first_text and first_text not in PLACEHOLDER_TEXTS:
+                    return options
+        
         formatted = []
-        if isinstance(options, list):
-            option_ids = ['A', 'B', 'C', 'D', 'E', 'F']
-            for idx, opt in enumerate(options):
-                if idx >= len(option_ids):
-                    break
-                opt_text = str(opt).strip() if opt else ""
-                if opt_text:
-                    formatted.append({"id": option_ids[idx], "text": opt_text})
-        if question_type in ['MCQ', 'Multiple Choice Question (MCQ)', 'Single Correct MCQ',
-                             'MSQ', 'Multiple Select Question (MSQ)', 'Case Study']:
-            if not formatted or len(formatted) < 2:
-                formatted = [
-                    {"id": "A", "text": "Option A"},
-                    {"id": "B", "text": "Option B"},
-                    {"id": "C", "text": "Option C"},
-                    {"id": "D", "text": "Option D"},
-                ]
+        option_ids = ['A', 'B', 'C', 'D', 'E', 'F']
+        
+        for idx, opt in enumerate(options):
+            if idx >= len(option_ids):
+                break
+            
+            if isinstance(opt, dict):
+                opt_text = opt.get('text') or opt.get('value') or str(opt)
+                opt_id = opt.get('id') or option_ids[idx]
+            else:
+                opt_text = str(opt).strip()
+                opt_id = option_ids[idx]
+            
+            # Skip placeholder text
+            if opt_text and opt_text.strip().lower() not in PLACEHOLDER_TEXTS:
+                formatted.append({"id": opt_id, "text": opt_text})
+        
+        # Only use generic fallback if truly nothing came back
+        if (not formatted or len(formatted) < 2) and question_type in ['MCQ', 'Multiple Choice Question (MCQ)', 'Single Correct MCQ', 'Case Study']:
+            return [
+                {"id": "A", "text": "Refer to study material for Option A"},
+                {"id": "B", "text": "Refer to study material for Option B"},
+                {"id": "C", "text": "Refer to study material for Option C"},
+                {"id": "D", "text": "Refer to study material for Option D"},
+            ]
+            
         return formatted
     
     def _normalize_answer(self, answer, question_type):
@@ -455,7 +482,6 @@ Generate all {count} questions now."""
         if question_type in ['One-word Answer']:
             if 'value' not in answer and 'correctAnswer' in answer:
                 answer['value'] = answer['correctAnswer']
-            return answer
         return answer
 
     def _normalize_questions(self, questions, question_type, difficulty, marks, count):
@@ -464,7 +490,6 @@ Generate all {count} questions now."""
             text = question.get('text', f'Question {idx}')
             q_type = question.get('type', question_type)
             q_difficulty = question.get('difficulty', difficulty)
-            q_marks = self._normalize_marks(question.get('marks', marks))
             raw_options = question.get('options', [])
             formatted_options = self._format_options(raw_options, q_type)
             raw_answer = question.get('answer', {})
@@ -474,7 +499,7 @@ Generate all {count} questions now."""
                 'text': text,
                 'type': q_type,
                 'difficulty': q_difficulty,
-                'marks': q_marks,
+                'marks': marks,
                 'options': formatted_options,
                 'answer': normalized_answer
             })

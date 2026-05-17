@@ -283,8 +283,9 @@ socket.on('student_left', ({ socketId, name, count }) => {
 socket.on('anomaly_alert', ({ studentName, type, time }) => {
     alertCount++;
     document.getElementById('statAlerts').textContent = alertCount;
-    const typeMap = { tab_switch:'tab_switch', idle_30s:'idle' };
-    addAlert(typeMap[type]||'tab', `⚠️ ${studentName}: ${type==='tab_switch'?'switched tab':'idle 30s'} (${time})`);
+    const typeMap = { tab_switch:'tab_switch', window_blur:'tab_switch', idle_30s:'idle' };
+    const labelMap = { tab_switch:'switched tab', window_blur:'lost window focus', idle_30s:'idle 30s' };
+    addAlert(typeMap[type]||'tab', `⚠️ ${studentName}: ${labelMap[type]||type} (${time})`);
 });
 
 socket.on('doubt_received', ({ studentName, message, time }) => {

@@ -178,7 +178,8 @@ function showQuestion(idx) {
     currentQ = idx;
     const q = paper.questions[idx];
     const qNo = q.questionNo || (idx+1);
-    const isShort = q.type==='Short'||q.type==='Long'||q.type==='Descriptive';
+    const qType = (q.type || 'MCQ').toLowerCase();
+    const isShort = qType.includes('short') || qType.includes('long') || qType.includes('descriptive') || qType.includes('word') || qType.includes('essay') || qType.includes('case');
     const savedAns = answers[qNo] || '';
 
     document.getElementById('questionArea').innerHTML = `
@@ -191,7 +192,13 @@ function showQuestion(idx) {
             <div class="q-text">Q${qNo}. ${q.text}</div>
             ${isShort
                 ? `<textarea class="short-answer" id="ansInput" placeholder="Write your answer here..." onchange="saveAnswer(${qNo},this.value)">${savedAns}</textarea>`
-                : `<div class="options-grid">${(q.options||[]).map((opt)=>`<button class="option-btn ${savedAns===opt.charAt(0)?'selected':''}" onclick="selectOption(${qNo},'${opt.charAt(0)}',this)">${opt}</button>`).join('')}</div>`
+                : `<div class="options-grid">${(q.options||[]).map((opt, oi) => {
+                    const optText = typeof opt === 'string' ? opt : (opt.text || opt.label || JSON.stringify(opt));
+                    const optVal = typeof opt === 'string' ? opt : (opt.value || opt.text || opt.label || JSON.stringify(opt));
+                    const optLetter = String.fromCharCode(65 + oi);
+                    const isSelected = savedAns === optVal || savedAns === optLetter;
+                    return `<button class="option-btn ${isSelected?'selected':''}" onclick="selectOption(${qNo},'${optVal.replace(/'/g, "\\'")}',this)">${optText}</button>`;
+                }).join('')}</div>`
             }
             <div class="q-footer">
                 <button class="btn-sm btn-outline" onclick="clearAnswer(${qNo})">Clear Answer</button>

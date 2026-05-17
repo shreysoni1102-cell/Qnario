@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from gemini_service import GroqQuestionGenerator
+from gemini_service import GeminiQuestionGenerator
 from config import PYTHON_PORT, DEBUG
 import logging
 import requests
@@ -13,43 +13,43 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Groq service
-groq_generator = GroqQuestionGenerator()
+# Initialize Gemini service
+gemini_generator = GeminiQuestionGenerator()
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint with detailed Groq status"""
+    """Health check endpoint with detailed Gemini status"""
     try:
-        # Test Groq connection
-        test_result = groq_generator.generate_questions(
+        # Test Gemini connection
+        test_result = gemini_generator.generate_questions(
             subject='Physics',
             topic='Motion',
             difficulty='Easy',
             count=1,
             question_type='MCQ'
         )
-        groq_status = 'healthy' if test_result['success'] else 'degraded'
+        gemini_status = 'healthy' if test_result['success'] else 'degraded'
         error_msg = test_result.get('error') if not test_result['success'] else None
         return jsonify({
             'status': 'healthy',
-            'service': 'Groq Question Generator Microservice',
+            'service': 'Gemini Question Generator Microservice',
             'version': '2.0',
-            'groq_status': groq_status,
-            'current_model': groq_generator.model,
+            'gemini_status': gemini_status,
+            'current_model': gemini_generator.model,
             'error': error_msg
         }), 200
     except Exception as e:
         logger.error(f"❌ Health check failed: {str(e)}")
         return jsonify({
             'status': 'unhealthy',
-            'service': 'Groq Question Generator Microservice',
+            'service': 'Gemini Question Generator Microservice',
             'error': str(e)
         }), 500
 
 @app.route('/api/generate-questions', methods=['POST'])
 def generate_questions():
     """
-    Generate questions using Groq API via the Python service
+    Generate questions using Gemini API via the Python service
     """
     try:
         data = request.get_json()
@@ -66,13 +66,13 @@ def generate_questions():
         marks = data.get('marks', 1)
         if count < 1 or count > 50: count = 5
         logger.info(f'🚀 Generating {count} {question_type} questions for {subject} - {topic} ({difficulty})')
-        result = groq_generator.generate_questions(
+        result = gemini_generator.generate_questions(
             subject=subject, topic=topic, difficulty=difficulty, count=count,
             question_type=question_type, level=level, stream=stream,
             specific_topics=specific_topics, marks=marks
         )
         if result['success']:
-            logger.info(f'✅ Successfully generated {result["count"]} questions from {result.get("source", "Groq")}')
+            logger.info(f'✅ Successfully generated {result["count"]} questions from {result.get("source", "Gemini")}')
             return jsonify(result), 200
         else:
             error_msg = result.get('error', 'Unknown error')
@@ -86,10 +86,10 @@ def generate_questions():
         logger.error(f'❌ Error in generate_questions: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/test-groq', methods=['GET'])
-def test_groq():
+@app.route('/api/test-gemini', methods=['GET'])
+def test_gemini():
     try:
-        result = groq_generator.generate_questions(subject='Physics', topic='Motion', difficulty='Easy', count=1, question_type='MCQ')
+        result = gemini_generator.generate_questions(subject='Physics', topic='Motion', difficulty='Easy', count=1, question_type='MCQ')
         return jsonify(result), 200 if result['success'] else (429 if result.get('quota_exhausted') else 500)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -97,13 +97,13 @@ def test_groq():
 @app.route('/api/quota-status', methods=['GET'])
 def quota_status():
     try:
-        result = groq_generator.generate_questions(subject='General', topic='Test', difficulty='Easy', count=1, question_type='MCQ')
+        result = gemini_generator.generate_questions(subject='General', topic='Test', difficulty='Easy', count=1, question_type='MCQ')
         if result['success']:
-            return jsonify({'status': 'available', 'message': 'API quota is available', 'model': groq_generator.model}), 200
+            return jsonify({'status': 'available', 'message': 'API quota is available', 'model': gemini_generator.model}), 200
         elif result.get('quota_exhausted'):
-            return jsonify({'status': 'quota_exhausted', 'message': result.get('error', 'API quota exceeded'), 'model': groq_generator.model}), 429
+            return jsonify({'status': 'quota_exhausted', 'message': result.get('error', 'API quota exceeded'), 'model': gemini_generator.model}), 429
         else:
-            return jsonify({'status': 'error', 'message': result.get('error', 'Unknown error'), 'model': groq_generator.model}), 400
+            return jsonify({'status': 'error', 'message': result.get('error', 'Unknown error'), 'model': gemini_generator.model}), 400
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
@@ -114,7 +114,10 @@ def extract_syllabus():
         text_content = data.get('text', '').strip()
         subject_hint = data.get('subject', '')
         if not text_content: return jsonify({'success': False, 'error': 'No text content provided'}), 400
-        result = groq_generator.extract_syllabus_topics(text_content, subject_hint)
+        result = gemini_generator.extract_syllabus_topics(text_content, subject_hint)
+        # Ensure compatibility with Node.js server which expects 'extracted'
+        if result.get('success') and 'syllabus' in result:
+            result['extracted'] = result.pop('syllabus')
         return jsonify(result), 200 if result['success'] else 500
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -127,7 +130,7 @@ def generate_insights():
         subject = data.get('subject', 'General')
         chapter_stats = data.get('chapterStats', {})
         if not chapter_stats: return jsonify({'success': False, 'error': 'No chapter stats provided'}), 400
-        result = groq_generator.generate_study_suggestions(student_name, subject, chapter_stats)
+        result = gemini_generator.generate_study_suggestions(student_name, subject, chapter_stats)
         return jsonify(result), 200 if result['success'] else 500
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -139,5 +142,5 @@ def not_found(error): return jsonify({'error': 'Endpoint not found'}), 404
 def internal_error(error): return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    logger.info(f'Starting Groq Question Generator Microservice on port {PYTHON_PORT}')
+    logger.info(f'Starting Gemini Question Generator Microservice on port {PYTHON_PORT}')
     app.run(host='0.0.0.0', port=PYTHON_PORT, debug=DEBUG)
