@@ -1,10 +1,37 @@
 node_modules/
+qnario_node_modules/
 .venv/
+venv/
 uploads/
+
+# Environment files - NEVER commit these
 .env
+.env.local
+qnario/.env
+gemini-microservice/.env
+
+# Generated data files (auto-created at runtime)
 syllabi.json
 syllabus-papers.json
 exams.json
 results.json
 users.json
+exam-rooms.json
+qnario/generated-questions.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs & test output
+*.log
+test_output*.txt
+test_output*.log
+server_debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
 NONE OF USE/
