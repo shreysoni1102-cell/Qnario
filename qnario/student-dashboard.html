@@ -250,7 +250,7 @@
                 <a href="student-practice.html" class="menu-link" id="menuPractice">Practice Mode</a>
                 <a href="student-create-exam.html" class="menu-link" id="menuCreateExam">Generate Exam</a>
                 <a href="student-papers.html" class="menu-link" id="menuPapers">My Papers</a>
-                <a href="student-analysits.html" class="menu-link" id="menuAnalytics">Analytics</a>
+                <a href="student-analysits.html" class="menu-link" id="menuAnalytics">📊 Analytics</a>
             </div>
 
             <div class="menu-section">
@@ -355,7 +355,7 @@
     const path = window.location.pathname;
     if (path.includes('student-create-exam')) document.getElementById('menuCreateExam').classList.add('active');
     if (path.includes('student-papers')) document.getElementById('menuPapers').classList.add('active');
-    if (path.includes('student-analysits')) document.getElementById('menuAnalytics').classList.add('active');
+    if (path.includes('student-anal')) document.getElementById('menuAnalytics').classList.add('active');
 
     async function promptJoinQuiz() {
         const code = prompt("Enter 6-digit Quiz Code:");

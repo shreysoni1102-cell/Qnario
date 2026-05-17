@@ -12,6 +12,10 @@ export function isValidMobile(mobile) {
     return /^\d{10}$/.test(mobile);
 }
 
+// ⚠️  LEGACY FUNCTION — DO NOT USE for new registrations.
+// This function stores passwords in plain text in localStorage.
+// Real signup/login goes through the backend: POST /api/signup & /api/login
+// This is kept only for backward-compatibility with old sessions.
 export function signup(email, password, mobile, role) {
     if (!isValidEmail(email)) {
         alert('Email must be a valid domain (gmail, hotmail, edu.in, yahoo, outlook)');
