@@ -489,7 +489,7 @@ function renderSyllabusTree(data) {
                 ${(u.chapters||[]).map(c => `
                     <div class="chapter-row">
                         <div style="flex:1">
-                            <div class="chapter-name">📖 ${c.chapter}</div>
+                            <div class="chapter-name">📖 ${c.chapterName || c.chapter}</div>
                             <div>${(c.topics||[]).map(t => `<span class="topic-pill">${t}</span>`).join('')}</div>
                         </div>
                     </div>
@@ -511,7 +511,7 @@ function toggleUnit(idx) {
 // ──────────────────────────────────────────────
 function renderChapterCheckboxes(data) {
     const container = document.getElementById('chapterCheckboxes');
-    const chapters = (data.units||[]).flatMap(u => (u.chapters||[]).map(c => c.chapter));
+    const chapters = (data.units||[]).flatMap(u => (u.chapters||[]).map(c => c.chapterName || c.chapter));
     container.innerHTML = chapters.map(ch => `
         <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;font-size:0.87rem;">
             <input type="checkbox" class="chk-chapter" value="${ch}" checked style="accent-color:#667eea;width:16px;height:16px;">
