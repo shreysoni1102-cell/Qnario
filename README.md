@@ -1,6 +1,31 @@
 # 🎓 Qnario - Intelligent Exam Management Platform
+<p align="center">
+  <img src="assets/dashboard-preview.png" width="100%" alt="Qnario Dashboard Preview">
+</p>
 
-![Qnario Banner](https://via.placeholder.com/1200x400/0f172a/4facfe?text=Qnario+Intelligent+Platform)
+---
+
+## 📸 Interface Showcases
+
+<table width="100%">
+  <tr>
+    <td width="50%">
+      <p align="center"><b>🤖 AI Syllabus Scanner</b></p>
+      <img src="assets/syllabus-scanner.png" width="100%" alt="AI Syllabus Scanner">
+    </td>
+    <td width="50%">
+      <p align="center"><b>🛡️ Live Real-time Proctoring</b></p>
+      <img src="assets/live-proctoring.png" width="100%" alt="Live Proctoring Dashboard">
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" width="100%">
+      <p align="center"><b>📊 Interactive Student Analytics</b></p>
+      <img src="assets/student-analytics.png" width="100%" alt="Student Analytics Page">
+    </td>
+  </tr>
+</table>
+
 
 Qnario is a modern, AI-powered educational platform designed to streamline the examination process. It features real-time live exam monitoring, an intelligent AI microservice capable of extracting topics from syllabus PDFs to generate exam questions, and a fully interactive, role-based dashboard system.
 
@@ -52,6 +77,34 @@ graph TD
 ```
 
 ---
+
+## 🛠️ Technical Deep-Dive & System Design
+
+To ensure production-grade security, extreme real-time responsiveness, and resilient AI task scheduling, **Qnario** is built using modern system design patterns:
+
+### ⚡ 1. Decoupled Microservice Architecture (Separation of Concerns)
+Instead of running monolithic AI generation, the system separates **Input/Output I/O** from **Heavy Computation**:
+* **Node.js Gateway Server:** Handles lightweight HTTP routing, serves static UI templates, manages Mongoose database schemas, and maintains persistent WebSockets.
+* **Python AI Microservice:** Decoupled entirely on port `5000`. It wraps CPU-heavy PDF extraction, token calculation, and LLM text generation (using **Groq Llama 3** & **Google Gemini**). This guarantees that a sudden spike in teachers scanning syllabus files **never** blocks the real-time WebSocket signals of active exams!
+
+### 🔄 2. State-Persistence & Crash Recovery
+Online examinations are highly time-critical. Qnario enforces a **zero-data-loss** philosophy:
+* **JSON State Back-Ups:** Active exam rooms, student statuses, chat logs, and anomaly warnings are synced to local disk memory every 5 seconds.
+* **State Restoration:** If the Node.js server experiences a crash, power outage, or automatic cloud restart, the entire active state is fully loaded back into server memory. Sockets automatically reconnect using `localStorage` handshake data, restoring the exam session for students within 1.5 seconds.
+
+### 🛡️ 3. Real-Time Anti-Cheat Proctoring (Socket.IO Hub)
+The anti-cheat proctoring suite uses low-latency, bidirectional WebSocket events:
+* **Focus Anomaly Engine:** Triggers DOM window focus/blur event listeners on the client side. Any focus loss sends an instant socket message to the teacher's monitor.
+* **UI Grey-Out Lock:** When the teacher broadcasts a `force_end_exam` event, a global CSS block (`pointer-events: none; opacity: 0.5`) instantly freezes the student's screen, and answers are automatically submitted 1.5 seconds later to prevent page-reload bypassing.
+
+### 🔑 4. Hybrid JWT Security Firewall
+Authentication is secured using a modern security pipeline:
+* **JWT Signing:** The backend signs cryptographically secure 24-hour tokens upon successful user verification, storing them in client `localStorage`.
+* **Token Verification Middleware:** Protects crucial endpoints (like room creation and proctoring channels). 
+* **Seamless Fallback:** Wrote a highly adaptive middleware parser that automatically extracts JWT tokens from the `Authorization: Bearer <token>` header, with a legacy header fallback to support offline local testing seamlessly.
+
+---
+
 
 ## 🚀 Setup & Installation
 
