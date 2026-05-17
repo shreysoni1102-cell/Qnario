@@ -209,6 +209,37 @@ let roomCode = '', alertCount = 0;
 const studentMap = {};
 const submittedMap = {};
 
+async function loadMonitorData() {
+    if (!roomCode) return;
+    try {
+        const info = await fetch(`/api/exam-room/${roomCode}/monitor`).then(r=>r.json());
+        if (info.success && info.room) {
+            const serverStudents = info.room.students || {};
+            Object.keys(serverStudents).forEach(sockId => {
+                if (!studentMap[sockId]) studentMap[sockId] = serverStudents[sockId];
+            });
+            if (info.submitted) {
+                info.submitted.forEach(r => {
+                    submittedMap[r.studentEmail] = { studentName: r.studentName, totalScore: r.totalScore, totalMarks: r.totalMarks, percentage: r.percentage, time: new Date(r.submittedAt).toLocaleTimeString() };
+                    Object.keys(studentMap).forEach(id => { if(studentMap[id].email===r.studentEmail) studentMap[id].status='submitted'; });
+                });
+            }
+            renderStudents();
+            renderResults();
+            updateAvgScore();
+            document.getElementById('statJoined').textContent = Object.keys(studentMap).length;
+            document.getElementById('statSubmitted').textContent = Object.keys(submittedMap).length;
+        }
+    } catch (e) { console.error('Failed to load monitor data', e); }
+}
+
+socket.on('connect', () => {
+    if (roomCode) {
+        socket.emit('teacher_join', { roomCode });
+        loadMonitorData();
+    }
+});
+
 async function createRoom() {
     const paperId = document.getElementById('paperIdInput').value.trim();
     const duration = parseInt(document.getElementById('durationInput').value) || 180;

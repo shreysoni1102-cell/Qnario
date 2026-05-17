@@ -13,8 +13,22 @@ const io = new Server(httpServer, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 3000;
 const bcrypt = require('bcryptjs');
 
-// In-memory exam rooms: { [roomCode]: { paperId, teacherEmail, students:{[socketId]:{name,email,progress,score}}, started, startTime, duration } }
-const examRooms = {};
+// In-memory exam rooms, synced to file every 5s
+function readExamRooms() {
+    const file = path.join(__dirname, 'exam-rooms.json');
+    if (!fs.existsSync(file)) return {};
+    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
+}
+function writeExamRooms(rooms) {
+    const file = path.join(__dirname, 'exam-rooms.json');
+    fs.writeFileSync(file, JSON.stringify(rooms, null, 2), 'utf8');
+}
+const examRooms = readExamRooms();
+
+// Auto-save exam rooms to persist across server restarts
+setInterval(() => {
+    writeExamRooms(examRooms);
+}, 5000);
 
 // Import all database models
 const Subject = require('./models/Subject');
@@ -34,6 +48,15 @@ const examApi = require('./routes/exam-api');
 app.use(cors());
 app.use(express.json());
 const cookieParser = require('cookie-parser');
+
+// Global Rate Limiter for APIs
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // max 200 requests per IP
+    message: { success: false, error: 'Too many requests. Please try again later.' }
+});
+app.use('/api', limiter);
 app.use(cookieParser());
 app.use(express.static(__dirname));
 
@@ -996,6 +1019,17 @@ io.on('connection', (socket) => {
             }
         }
     });
+});
+
+// 404 handler - must be last
+app.use((req, res) => {
+    res.status(404).json({ success: false, error: 'Route not found', path: req.path });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('[Server Error]', err.message);
+    res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 // Start server with Socket.IO

@@ -312,18 +312,31 @@
 </div>
 
 <script>
-    const user = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+    function checkAuth() {
+        const u = JSON.parse(localStorage.getItem('qnario_current_user') || 'null');
+        if (!u || u.role !== 'teacher' || !u.email) {
+            window.location.replace('teacher-login.html');
+            return null;
+        }
+        return u;
+    }
 
-    if (!user || user.role !== 'teacher' || !user.email) {
-        window.location.href = 'teacher-login.html';
-    } else {
+    const user = checkAuth();
+
+    if (user) {
         document.getElementById('userEmail').innerText = user.email;
         document.getElementById('profileEmail').innerText = user.email;
     }
 
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted || !localStorage.getItem('qnario_current_user')) {
+            checkAuth();
+        }
+    });
+
     function logout() {
         localStorage.removeItem('qnario_current_user');
-        window.location.href = 'teacher-login.html';
+        window.location.replace('teacher-login.html');
     }
 
     const path = window.location.pathname;

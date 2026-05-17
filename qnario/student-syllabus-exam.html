@@ -190,6 +190,12 @@ const socket = io();
 let roomCode = '', studentName = '', studentEmail = '';
 let paper = null, answers = {}, currentQ = 0, timer = null, totalSecs = 0;
 
+socket.on('connect', () => {
+    if (roomCode && studentName && studentEmail) {
+        socket.emit('student_join', { roomCode, studentName, studentEmail });
+    }
+});
+
 // ── JOIN ──────────────────────────────────────────────────
 async function joinExam() {
     roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
