@@ -1,6 +1,6 @@
 # 🎓 Qnario - Intelligent Exam Management Platform
 <p align="center">
-  <img src="assets/qnario_linkedin_banner.png" width="100%" alt="Qnario AI Platform Banner">
+  <img src="assets/dashboard-preview.png" width="100%" alt="Qnario Dashboard Preview">
 </p>
 
 ---
@@ -60,14 +60,14 @@ graph TD
 
     subgraph PythonMicroservice [Python AI Microservice (Port 5000)]
         Flask[Flask API]
-        Groq[Groq LLM Engine]
+        GeminiGroq[Gemini & Groq AI Engines]
         PDFParser[PDF Extractor]
     end
 
     Router -->|JSON| Persistence
     Socket -->|Real-time| Client
     Router -->|REST| Flask
-    Flask -->|API Calls| Groq
+    Flask -->|API Calls| GeminiGroq
 ```
 
 ---
