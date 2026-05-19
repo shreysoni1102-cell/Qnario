@@ -51,14 +51,14 @@ Qnario is a modern, AI-powered educational platform designed to streamline the e
 graph TD
     Client[Web Browser Client\nHTML/CSS/JS] -->|HTTP / WebSockets| NodeBackend
 
-    subgraph NodeBackend [Node.js Express Server (Port 3000)]
+    subgraph NodeBackend ["Node.js Express Server (Port 3000)"]
         Router[API Router]
         Socket[Socket.IO Server]
         RateLimiter[Rate Limiter]
         Persistence[File Persistence\nexam-rooms.json]
     end
 
-    subgraph PythonMicroservice [Python AI Microservice (Port 5000)]
+    subgraph PythonMicroservice ["Python AI Microservice (Port 5000)"]
         Flask[Flask API]
         GeminiGroq[Gemini & Groq AI Engines]
         PDFParser[PDF Extractor]
