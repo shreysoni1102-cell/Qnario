@@ -1,6 +1,6 @@
 # Ignore HTML and CSS in GitHub language statistics so JS and Python are highlighted
-*.html linguist-vendored
-*.css linguist-vendored
+*.html linguist-detectable=false
+*.css linguist-detectable=false
 
 # Ignore JSON data files
-*.json linguist-vendored
+*.json linguist-detectable=false
