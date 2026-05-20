@@ -1072,6 +1072,11 @@ io.on('connection', (socket) => {
     });
 });
 
+// Health check route — used by tests and Docker health checks
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'Qnario API', timestamp: new Date() });
+});
+
 // 404 handler - must be last
 app.use((req, res) => {
     res.status(404).json({ success: false, error: 'Route not found', path: req.path });
@@ -1084,11 +1089,15 @@ app.use((err, req, res, next) => {
 });
 
 // Start server with Socket.IO
-httpServer.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-    console.log('✅ Socket.IO real-time server active');
-    (async () => {
-        const open = await import('open');
-        open.default(`http://localhost:${PORT}/landing.html`);
-    })();
-});
+if (require.main === module) {
+    httpServer.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+        console.log('✅ Socket.IO real-time server active');
+        (async () => {
+            const open = await import('open');
+            open.default(`http://localhost:${PORT}/landing.html`);
+        })();
+    });
+}
+
+module.exports = app;
