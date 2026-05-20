@@ -1,11 +1,14 @@
 node_modules/
 qnario_node_modules/
+qnario/node_modules/
 .venv/
 venv/
 uploads/
+uploads/syllabi/
 
 # Environment files - NEVER commit these
 .env
+*.env
 .env.local
 qnario/.env
 gemini-microservice/.env
