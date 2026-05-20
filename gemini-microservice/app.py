@@ -46,6 +46,7 @@ def health_check():
             'error': str(e)
         }), 500
 
+@app.route('/generate', methods=['POST'])
 @app.route('/api/generate-questions', methods=['POST'])
 def generate_questions():
     """

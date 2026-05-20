@@ -21,7 +21,7 @@ function generateToken(user) {
 // ==================== AUTHENTICATION ENDPOINTS ====================
 
 // Register User (with rate limiting)
-router.post('/signup', signupLimiter, async (req, res) => {
+router.post(['/signup', '/register'], signupLimiter, async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
         
