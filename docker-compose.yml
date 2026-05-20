@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7
+    container_name: qnario_mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+  ai_service:
+    build: ./gemini-microservice
+    container_name: qnario_ai
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    env_file: ./gemini-microservice/.env
+    depends_on:
+      - mongodb
+  node_server:
+    build: ./qnario
+    container_name: qnario_server
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file: ./qnario/.env
+    depends_on:
+      - mongodb
+      - ai_service
+volumes:
+  mongo_data:
