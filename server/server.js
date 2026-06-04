@@ -102,7 +102,10 @@ const saveExamRoomsBackup = () => {
 loadExamRoomsBackup();
 
 // Start persistence backup interval
-setInterval(saveExamRoomsBackup, 5000);
+let backupInterval;
+if (process.env.NODE_ENV !== 'test') {
+    backupInterval = setInterval(saveExamRoomsBackup, 5000);
+}
 
 // ==================== ROUTE REGISTRATIONS ====================
 app.use('/api/auth', authRoutes);

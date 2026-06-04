@@ -1,4 +1,5 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
 const { app } = require('../server');
 
 describe('Health Check Endpoint', () => {
@@ -9,8 +10,9 @@ describe('Health Check Endpoint', () => {
     serverInstance = app.listen(0, () => done());
   });
 
-  afterAll((done) => {
-    serverInstance.close(done);
+  afterAll(async () => {
+    await new Promise((resolve) => serverInstance.close(resolve));
+    await mongoose.connection.close();
   });
 
   test('GET /api/health returns 200 and success status', async () => {

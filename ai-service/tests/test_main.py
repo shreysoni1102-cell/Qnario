@@ -17,6 +17,6 @@ def test_health_check_returns_valid_response():
     assert response.status_code in [200, 500]
 
 def test_generate_validation_error():
-    # Sending empty body will cause validation error (422 Unprocessable Entity)
-    response = client.post("/generate", json={})
+    # Sending an invalid count (0) will cause validation error (422 Unprocessable Entity)
+    response = client.post("/generate", json={"count": 0})
     assert response.status_code == 422
