@@ -15,9 +15,13 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: cd qnario && npm install
+        run: |
+          cd server
+          npm install
       - name: Run tests
-        run: cd qnario && npm test
+        run: |
+          cd server
+          npm test
         env:
           JWT_SECRET: test_secret_key_for_ci_only
           MONGODB_URI: mongodb://localhost:27017/qnario_test
@@ -29,11 +33,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
       - name: Install dependencies
-        run: cd gemini-microservice && pip install -r requirements.txt && pip install pytest
+        run: |
+          cd ai-service
+          pip install -r requirements.txt
+          pip install pytest httpx
       - name: Run tests
-        run: cd gemini-microservice && python -m pytest tests/
+        run: |
+          cd ai-service
+          python -m pytest
         env:
           GROQ_API_KEY: dummy_key_for_ci
-          GOOGLE_GENAI_API_KEY: dummy_key_for_ci
+          GEMINI_API_KEY: dummy_key_for_ci
