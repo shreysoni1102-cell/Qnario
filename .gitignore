@@ -1,40 +1,75 @@
+# Monorepo Node/React dependency exclusions
 node_modules/
-qnario_node_modules/
+client/node_modules/
+server/node_modules/
 qnario/node_modules/
-.venv/
-venv/
-uploads/
-uploads/syllabi/
+qnario_node_modules/
 
-# Environment files - NEVER commit these
+# Local Environment Credentials (NEVER commit these)
 .env
-*.env
 .env.local
-qnario/.env
-gemini-microservice/.env
+.env.development.local
+.env.test.local
+.env.production.local
+client/.env
+server/.env
+ai-service/.env
 
-# Generated data files (auto-created at runtime)
-syllabi.json
-syllabus-papers.json
-exams.json
-results.json
-users.json
-exam-rooms.json
-qnario/generated-questions.json
+# Build outputs
+dist/
+client/dist/
+build/
+vite.config.js.timestamp-*
 
-# Python cache
+
+# Zipped / Archived items
+*.zip
+*.tar.gz
+*.rar
+
+# Editor / IDE configuration
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python interpreter caches and virtual envs
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+ai-service/.venv/
+ai-service/venv/
+.pytest_cache/
 
-# Logs & test output
-*.log
-test_output*.txt
-test_output*.log
-server_debug.log
-
-# OS files
+# OS and system files
 .DS_Store
 Thumbs.db
 
-NONE OF USE/
+# Platform-specific logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Server runtime snapshot files (auto-generated, not source code)
+server/exam-rooms.json
+server/syllabi.json
+server/syllabus-papers.json
+server/results.json
+server/out.txt
+server/err.txt
+
+# Uploaded syllabus files (user data, not source code)
+server/uploads/
+
+# Antigravity / IDE agent files
+implementation_plan.md
+

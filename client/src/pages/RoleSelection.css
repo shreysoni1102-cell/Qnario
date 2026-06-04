@@ -1,0 +1,319 @@
+/* ================= ROLE SELECTION STYLES ================= */
+
+.role-page-wrapper {
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    background: #0a0e27;
+}
+
+/* Backdrops */
+.bg-mesh-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.mesh-gradient {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background:
+        radial-gradient(circle at 20% 30%, #667eea 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, #764ba2 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, #4facfe 0%, transparent 40%);
+    animation: moveRoleMesh 20s infinite alternate ease-in-out;
+    filter: blur(120px);
+    opacity: 0.7;
+}
+
+@keyframes moveRoleMesh {
+    0% { transform: translate(-10%, -10%); }
+    100% { transform: translate(10%, 10%); }
+}
+
+.mesh-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.mesh-glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #667eea, transparent 70%);
+    filter: blur(120px);
+    opacity: 0.3;
+    animation: floatRoleOrb 18s infinite alternate ease-in-out;
+}
+
+.mesh-glow.orb2 {
+    top: 60%;
+    left: 70%;
+    background: radial-gradient(circle, #764ba2, transparent 70%);
+    animation-duration: 22s;
+}
+
+@keyframes floatRoleOrb {
+    0% { transform: translate(-50px, -50px); }
+    100% { transform: translate(50px, 50px); }
+}
+
+/* Navbar */
+.role-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.role-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #667eea, #4facfe);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    cursor: pointer;
+}
+
+.role-nav-btn {
+    padding: 10px 25px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.role-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Main Section */
+.role-main-section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 20px;
+    text-align: center;
+    z-index: 1;
+    position: relative;
+    animation: fadeInRolePage 1s ease forwards;
+}
+
+@keyframes fadeInRolePage {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Brand Header */
+.brand-header-crest {
+    margin-bottom: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.brand-logo-outer {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    margin-bottom: 15px;
+}
+
+.brand-logo-inner {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: white;
+}
+
+.brand-title-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3rem;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #667eea, #f5576c, #4facfe);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.brand-subtitle-text {
+    opacity: 0.7;
+    font-size: 1.1rem;
+    max-width: 500px;
+}
+
+/* Role Cards Grid */
+.role-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    max-width: 950px;
+    width: 100%;
+}
+
+.role-selection-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 45px 30px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.4s ease;
+    overflow: hidden;
+}
+
+.role-selection-card::before {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    opacity: 0;
+    transition: 0.5s;
+    pointer-events: none;
+}
+
+.role-selection-card.teacher-border::before {
+    background: radial-gradient(circle, #667eea, transparent 60%);
+}
+.role-selection-card.student-border::before {
+    background: radial-gradient(circle, #4facfe, transparent 60%);
+}
+.role-selection-card.admin-border::before {
+    background: radial-gradient(circle, #f5576c, transparent 60%);
+}
+
+.role-selection-card:hover::before {
+    opacity: 0.15;
+}
+
+.role-selection-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.role-selection-card.teacher-border:hover { border-color: rgba(102, 126, 234, 0.8); }
+.role-selection-card.student-border:hover { border-color: rgba(79, 172, 254, 0.8); }
+.role-selection-card.admin-border:hover { border-color: rgba(245, 87, 108, 0.8); }
+
+.role-selection-icon {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+}
+
+.role-selection-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.role-selection-subtitle {
+    opacity: 0.7;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Animations Elements */
+.floating-letters-container,
+.falling-books-container {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.floating-letters-container span {
+    position: absolute;
+    opacity: 0;
+    font-weight: 800;
+    font-family: 'Space Grotesk', sans-serif;
+    animation: floatLettersUp 15s linear infinite;
+}
+
+@keyframes floatLettersUp {
+    0% {
+        opacity: 0;
+        transform: translateY(105vh) rotate(0deg);
+    }
+    10% {
+        opacity: 0.15;
+    }
+    90% {
+        opacity: 0.15;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10vh) rotate(360deg);
+    }
+}
+
+.falling-books-container span {
+    position: absolute;
+    opacity: 0;
+    animation: fallBooksDown 12s linear infinite;
+}
+
+@keyframes fallBooksDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-10vh) rotate(0deg);
+    }
+    10% {
+        opacity: 0.3;
+    }
+    90% {
+        opacity: 0.3;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(105vh) rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .role-navbar {
+        padding: 15px 25px;
+    }
+    .brand-title-text {
+        font-size: 2.2rem;
+    }
+    .role-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}

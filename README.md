@@ -1,93 +1,368 @@
-# Qnario — AI-Powered Exam Platform
+<div align="center">
 
-![CI](https://github.com/shreysoni1102-cell/Qnario/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/badge/license-Academic-blue)
-![Node](https://img.shields.io/badge/node-20+-green)
-![Python](https://img.shields.io/badge/python-3.11+-blue)
+# 🎓 Qnario
+### AI-Powered Exam & Assessment Platform
 
-> Real-time AI exam platform — syllabus PDF in, exam questions out, live proctoring included.
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-6+-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
+[![License](https://img.shields.io/badge/License-Academic-blue?style=for-the-badge)](./LICENSE)
 
-**[Live Demo](https://your-live-demo-url.com)** | **[Demo Video](https://your-demo-video-url)**
+**[📺 Demo Video](#) · [🚀 Live Demo](#) · [📖 Full Docs](./GUIDE.md)**
 
 ---
 
-## What it does
+*Making a question paper used to take hours. With Qnario, a teacher uploads their syllabus, selects the topics they want — and the AI generates a complete, ready-to-use question paper in seconds.*
 
-Teachers upload a syllabus PDF. The AI (Gemini + Groq Llama3-70b) extracts topics and
-generates exam questions in seconds. Students join via a 6-digit code. The teacher watches
-a live proctoring dashboard — tab switches, idle time, and anomalies are flagged in real
-time via Socket.IO. If the server crashes, exam sessions auto-restore within 1.5 seconds.
+</div>
 
-## Architecture
+---
+
+> **The Problem:** Teachers spend enormous time creating question papers from scratch — especially when they want to cover only specific topics or skip chapters not yet taught.
+>
+> **The Solution:** Upload your syllabus PDF → AI reads and extracts every unit and topic → You select exactly what you want → AI builds the full question paper instantly. Download it, or launch it as a live proctored exam.
+
+## 📸 Screenshots
+
+<!-- 
+  🎨 HOW TO UPDATE THESE IMAGES:
+  Open your app locally at http://localhost:5173 and take screenshot files.
+  Save them into the `./assets/` directory at the project root with the following filenames:
+  
+  1. For "AI Syllabus Scanner", save as: syllabus-scanner.png
+  2. For "Question Paper & Downloads", save as: paper-download-options.png
+  3. For "Live Proctoring Monitor", save as: live-proctoring.png
+  4. For "2-Step OTP Authentication", save as: login-otp-flow.png
+  5. For "Admin System Dashboard", save as: admin-dashboard.png
+  6. For "LinkedIn Banner", save as: qnario_linkedin_banner.png
+-->
+
+| AI Syllabus Scanner | Question Paper & Downloads |
+|---|---|
+| ![Syllabus](./assets/syllabus-scanner.png) | ![Downloads](./assets/paper-download-options.png) |
+
+| Live Proctoring Monitor | 2-Step OTP Authentication |
+|---|---|
+| ![Live Monitor](./assets/live-proctoring.png) | ![OTP Auth](./assets/login-otp-flow.png) |
+
+| Admin System Dashboard | LinkedIn Banner |
+|---|---|
+| ![Admin](./assets/admin-dashboard.png) | ![Banner](./assets/qnario_linkedin_banner.png) |
+
+---
+
+## ✨ Key Features
+
+### 📄 Upload Syllabus → Get Question Paper (Core Feature)
+This is the heart of Qnario. Designed to **save teachers hours of work**:
+1. Teacher uploads their syllabus — **PDF, DOCX, JPG, or PNG**
+2. AI automatically reads it and **extracts every unit and topic**
+3. Teacher **selects only the topics** they want in the exam (per unit)
+   - Each unit has a **"Select All" toggle**
+   - A live **"X / Y topics selected"** counter keeps track
+   - Great for when some syllabus chapters are not yet taught
+4. Click Generate → AI creates a **complete question paper instantly**
+5. Teacher can **preview and edit** individual questions
+6. **Download** the paper or **launch it as a live exam**
+
+### 🤖 Dual AI Engine
+- **Google Gemini** (primary) for high-quality question generation
+- **Groq LLaMA** (automatic fallback if Gemini quota exceeded)
+- Supports: **MCQ, Short Answer, Long Answer, True/False**
+- Configurable **difficulty**: Easy / Medium / Hard
+- Teacher never sees an error — fallback is completely transparent
+
+### 🔴 Live Proctored Exam Rooms *(Bonus Feature)*
+- Teacher creates a room → gets a **6-digit code** to share with students
+- Students join from any browser (laptop or phone)
+- Teacher sees **real-time** list of who joined and who submitted
+- **Anti-cheat detection**: Tab switch or focus loss triggers instant alert
+- **Crash recovery**: Room state saved every 5 seconds — survives restarts
+
+### 👤 Student Features
+- Join exam via 6-digit room code
+- AI-powered **practice test** by topic and difficulty
+- Dashboard with score history and study streaks
+
+### 🛡️ Admin Panel
+- View all registered users (students & teachers)
+- Filter by role, delete accounts with confirmation
+- Live count stats
+
+---
+
+## 🏗️ Architecture
 
 ```
-Browser (HTML/CSS/JS)
-       |
-       | HTTP + WebSockets
-       v
-Node.js / Express (Port 3000)    <---->   MongoDB
-       |                                  + JSON state backup
-       | REST
-       v
-Python / Flask AI Service (Port 5000)
-       |
-       +--> Google Gemini 1.5 Flash
-       +--> Groq Llama3-70b
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT (Browser)                     │
+│         React 18 + Vite + Socket.io-client              │
+│              Port 5173 (dev) / 80 (prod)                │
+└────────────────────┬────────────────────────────────────┘
+                     │  HTTP + WebSocket
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│               SERVER (Node.js + Express)                │
+│        REST API + Socket.io + JWT Auth + Multer         │
+│                      Port 3000                          │
+│                         │                               │
+│              ┌──────────┴──────────┐                    │
+│              ▼                     ▼                    │
+│        MongoDB 6+            AI Microservice            │
+│     (Users, Exams,      (Python FastAPI, Port 5000)     │
+│    Results, Papers)      Gemini API + Groq API          │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Quick start (Docker)
+---
 
+## 🛠️ Tech Stack
+
+### Frontend
+| Technology | Purpose |
+|---|---|
+| **React 18** | UI Component Framework |
+| **Vite 5** | Build Tool + Dev Server + API Proxy |
+| **React Router DOM 6** | Client-side Routing + Protected Routes |
+| **Axios** | HTTP API Requests |
+| **Socket.io-client** | Real-time WebSocket Events |
+| **Lucide React** | Icon Library |
+| **Recharts** | Data Visualization Charts |
+| **jsPDF** | PDF Export |
+| **Vanilla CSS** | Custom Design System (Glassmorphism) |
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| **Node.js 20** | JavaScript Runtime |
+| **Express.js 4** | REST API Framework |
+| **MongoDB + Mongoose 8** | Database + ODM |
+| **Socket.io 4** | Real-time Bidirectional Events |
+| **JWT (jsonwebtoken)** | Authentication Tokens |
+| **bcryptjs** | Password Hashing (salt rounds: 10) |
+| **Nodemailer** | Email: OTP, Welcome, Password Reset |
+| **Multer** | Syllabus File Upload Handler |
+| **pdf-parse + mammoth** | PDF and DOCX Text Extraction |
+| **express-rate-limit** | API Abuse Prevention |
+| **express-validator** | Input Sanitization & Validation |
+| **Helmet** | HTTP Security Headers |
+| **cookie-parser** | Secure Cookie Handling |
+
+### AI Microservice
+| Technology | Purpose |
+|---|---|
+| **Python 3.10+** | Runtime |
+| **FastAPI** | High-performance Async API Framework |
+| **Uvicorn** | ASGI Server |
+| **Pydantic v2** | Request/Response Schema Validation |
+| **Google Gemini API** | Primary AI — Question Generation & Syllabus Parsing |
+| **Groq API (LLaMA)** | Fallback AI when Gemini quota is exceeded |
+
+---
+
+## 📁 Project Structure
+
+```
+Qnario/
+├── client/                    # React Frontend (Vite)
+│   ├── src/
+│   │   ├── context/           # AuthContext, SocketContext
+│   │   ├── pages/             # All page components
+│   │   │   ├── Landing.jsx
+│   │   │   ├── Login.jsx      # 2-step OTP signup + login
+│   │   │   ├── StudentDashboard.jsx
+│   │   │   ├── StudentPractice.jsx
+│   │   │   ├── ExamRoom.jsx   # Live proctored exam
+│   │   │   ├── TeacherDashboard.jsx
+│   │   │   ├── SyllabusUpload.jsx  # AI syllabus scanner
+│   │   │   ├── PaperPreview.jsx
+│   │   │   ├── LiveMonitor.jsx     # Real-time teacher view
+│   │   │   └── AdminDashboard.jsx
+│   │   ├── services/api.js    # All Axios API functions
+│   │   └── index.css          # Global design system
+│   └── vite.config.js         # Proxy config
+│
+├── server/                    # Node.js Backend
+│   ├── controllers/           # authController, examController
+│   ├── models/                # 10 Mongoose schemas
+│   ├── routes/                # authRoutes, examRoutes
+│   ├── middleware/            # JWT auth, rate limiter
+│   ├── socket/                # Socket.io proctoring handlers
+│   ├── utils/                 # emailService, seed, docs
+│   ├── config/db.js           # MongoDB connection
+│   └── server.js              # Entry point
+│
+├── ai-service/                # Python FastAPI Microservice
+│   ├── services/
+│   │   └── gemini_service.py  # Gemini + Groq AI engine
+│   ├── main.py                # FastAPI app + endpoints
+│   └── config.py
+│
+└── docker-compose.yml         # Container orchestration
+```
+
+---
+
+## 🚀 Quick Start (Local)
+
+### Prerequisites
+- Node.js 18+
+- Python 3.10+
+- MongoDB running locally
+- [Gemini API Key](https://aistudio.google.com) (free)
+- [Groq API Key](https://console.groq.com) (free)
+- Gmail App Password (for email features)
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/shreysoni1102-cell/Qnario.git
 cd Qnario
-cp qnario/.env.example qnario/.env
-cp gemini-microservice/.env.example gemini-microservice/.env
-# Fill in your API keys in both .env files
-docker-compose up --build
-# Open http://localhost:3000
 ```
 
-## Manual start (without Docker)
+### 2. Set up environment variables
 
 ```bash
-# Terminal 1 — AI microservice
-cd gemini-microservice && python -m venv .venv && .venv/Scripts/activate
-pip install -r requirements.txt && python app.py
+# Server
+cp server/.env.example server/.env
+# → Fill in your MongoDB URI, JWT secret, API keys, email
 
-# Terminal 2 — Main server
-cd qnario && npm install && npm start
+# AI Service
+cp ai-service/.env.example ai-service/.env
+# → Fill in your Gemini and Groq API keys
 ```
 
-## Tech stack
+### 3. Start all 3 services
 
-| Layer | Technology |
-|---|---|
-| Frontend | Vanilla JS, HTML5, CSS3 (Glassmorphism) |
-| Backend | Node.js 20, Express.js |
-| Real-time | Socket.IO |
-| Database | MongoDB + Mongoose |
-| Auth | JWT + bcryptjs |
-| AI Service | Python 3.11, Flask |
-| AI Models | Google Gemini 1.5 Flash, Groq Llama3-70b |
-| PDF Parsing | PyPDF2, Mammoth |
-| DevOps | Docker, Docker Compose, GitHub Actions |
-
-## Running tests
-
+**Terminal 1 — Backend (Node.js)**
 ```bash
-cd qnario && npm test
-cd gemini-microservice && python -m pytest tests/
+cd server
+npm install
+npm run dev
+# → Running on http://localhost:3000
 ```
 
-## Key engineering decisions
+**Terminal 2 — AI Microservice (Python)**
+```bash
+cd ai-service
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # Mac/Linux
+pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 5000 --reload
+# → Running on http://localhost:5000
+```
 
-- **Microservice split**: AI tasks run in a separate Python process so a spike in PDF
-  processing never blocks live exam WebSocket signals.
-- **Crash recovery**: Exam room state is snapshotted to disk every 5 seconds. On restart,
-  students reconnect automatically using localStorage session data.
-- **Anti-cheat**: DOM focus/blur events trigger instant Socket.IO anomaly alerts to the
-  teacher. Force-end freezes the student UI and auto-submits after 1.5 seconds.
-- **Rate limiting**: 200 requests per 15 minutes globally to block abuse.
+**Terminal 3 — Frontend (React)**
+```bash
+cd client
+npm install
+npm run dev
+# → Running on http://localhost:5173
+```
+
+### 4. Open in browser
+```
+http://localhost:5173
+```
 
 ---
-Developed as a capstone project. All rights reserved.
+
+## 🗄️ Database Schema Overview
+
+| Model | Key Fields |
+|---|---|
+| `User` | name, email, password (bcrypt), role, isEmailVerified |
+| `Question` | text, options[], correctAnswer, subject, topic, difficulty |
+| `StudentAttempt` | studentId, examId, answers[], score, submittedAt |
+| `StudentResult` | studentId, percentage, grade, AI feedback |
+| `Analytics` | studentId, chapterStats, performanceTrend |
+| `GeneratedQuestion` | AI-generated Q&A, marks, source topic |
+
+---
+
+## 🔐 Environment Variables
+
+### `server/.env`
+```env
+PORT=3000
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/qnario
+JWT_SECRET=your_strong_random_secret_here
+JWT_EXPIRES_IN=7d
+AI_MICROSERVICE_URL=http://localhost:5000
+GROQ_API_KEY=your_groq_key
+EMAIL_SERVICE=gmail
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_gmail_app_password
+FRONTEND_URL=http://localhost:5173
+```
+
+### `ai-service/.env`
+```env
+PYTHON_PORT=5000
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_key
+DEBUG=True
+```
+
+---
+
+## 🌐 API Reference
+
+### Auth Endpoints (`/api/auth/`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/send-signup-otp` | Send 6-digit OTP to email |
+| `POST` | `/signup` | Verify OTP + create account |
+| `POST` | `/login` | Authenticate user |
+| `POST` | `/logout` | End session |
+| `POST` | `/forgot-password` | Send password reset email |
+| `POST` | `/reset-password` | Set new password |
+| `GET` | `/profile` | Get current user |
+
+### Core Endpoints (`/api/`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/syllabus/upload` | Upload syllabus file |
+| `POST` | `/syllabus/:id/generate` | AI-generate question paper |
+| `GET` | `/practice-test` | Get AI practice questions |
+| `POST` | `/exam-room/create` | Create live exam room |
+| `POST` | `/exam-room/:code/submit` | Submit exam answers |
+| `GET` | `/dashboard/student/:id` | Student stats |
+
+---
+
+## 🔑 Key Engineering Decisions
+
+**1. Microservice Architecture**
+> The AI question generation runs in a separate Python FastAPI process. This isolates heavy AI API calls from the Node.js event loop, so a slow Gemini response never delays real-time Socket.io exam events.
+
+**2. Dual AI Fallback**
+> When Gemini's free-tier quota is exhausted, the system automatically switches to Groq (LLaMA-3). Students and teachers never see an error — the fallback is transparent.
+
+**3. OTP-Based Email Verification**
+> Registration uses a 2-step flow: collect details → email 6-digit OTP (10-minute TTL) → verify → create account. OTPs are stored in an in-memory Map (no database overhead) and cleared immediately after use.
+
+**4. Crash Recovery for Exam Rooms**
+> Active exam room state is written to `exam-rooms.json` every 5 seconds. On server restart, rooms are restored automatically. Students can reconnect using their session token.
+
+**5. Vite Proxy for LAN Access**
+> The Vite dev server proxies all `/api` requests to the Node backend. This means the frontend works identically from `localhost`, `192.168.x.x`, or any LAN IP — no hardcoded URLs needed.
+
+---
+
+## 🤝 Contributing
+
+This is an academic capstone project. Issues and suggestions are welcome via [GitHub Issues](https://github.com/shreysoni1102-cell/Qnario/issues).
+
+---
+
+## 👨‍💻 Author
+
+**Shrey Soni**
+- GitHub: [@shreysoni1102-cell](https://github.com/shreysoni1102-cell)
+
+---
+
