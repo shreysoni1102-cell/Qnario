@@ -70,6 +70,4 @@ server/err.txt
 # Uploaded syllabus files (user data, not source code)
 server/uploads/
 
-# Antigravity / IDE agent files
-implementation_plan.md
 
