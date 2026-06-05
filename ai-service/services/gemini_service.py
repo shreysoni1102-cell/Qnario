@@ -261,26 +261,45 @@ class GeminiQuestionGenerator:
         return {"success": True, "questions": questions}
 
     def extract_syllabus_topics(self, text_content, subject_hint):
-        prompt = f"""Extract all units, chapters and topics from this syllabus text.
-Subject hint: {subject_hint or 'Auto-detect'}
-Return only JSON in this format:
+        prompt = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
+
+CRITICAL RULES — You MUST follow these exactly:
+1. Use the EXACT unit names as written in the document. DO NOT rename, paraphrase, or reword them.
+   - If the syllabus says "UNIT-I AUTOMATA FUNDAMENTALS", the unitName MUST be "UNIT-I: AUTOMATA FUNDAMENTALS"
+   - If the syllabus says "UNIT-II REGULAR EXPRESSIONS AND LANGUAGES", the unitName MUST be "UNIT-II: REGULAR EXPRESSIONS AND LANGUAGES"
+   - NEVER substitute your own names like "Introduction to Theory of Computation" or "Finite Automata"
+2. Keep the unitNumber as the ordinal (1 for UNIT-I, 2 for UNIT-II, etc.)
+3. For chapters inside each unit: if the syllabus has sub-headings, use them exactly. If not, create 1-2 chapters named after the main topic groups in that unit's content.
+4. For topics: extract the exact technical terms listed in the unit content (e.g., "Deterministic Finite Automata", "Pushdown Automata", "Pumping Lemma").
+5. DO NOT merge units together. Each UNIT in the syllabus must be a separate entry.
+6. DO NOT create units that are not in the syllabus.
+
+Subject: {subject_hint or 'Auto-detect from document'}
+
+Return ONLY valid JSON in this exact format, nothing else:
 {{
-  "subject": "Name",
+  "subject": "Exact subject name from the document",
   "units": [
     {{
       "unitNumber": 1,
-      "unitName": "Name",
+      "unitName": "UNIT-I: EXACT NAME FROM DOCUMENT",
       "chapters": [
-        {{ "chapterName": "Name", "topics": ["Topic 1", "Topic 2"] }}
+        {{
+          "chapterName": "Exact or inferred chapter name",
+          "topics": ["Exact Topic 1", "Exact Topic 2", "Exact Topic 3"]
+        }}
       ]
     }}
   ]
 }}
-Syllabus text:
-{text_content[:15000]}"""
+
+Syllabus document text:
+{text_content[:15000]}
+
+REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
         
         logger.info(f"Extracting syllabus from {len(text_content)} chars...")
-        result = self._chat(prompt, max_tokens=3000)
+        result = self._chat(prompt, max_tokens=4000, temperature=0.1)
         
         if result["success"]:
             logger.info("Gemini call successful, parsing response...")

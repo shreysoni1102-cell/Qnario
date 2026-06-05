@@ -369,25 +369,95 @@ const SyllabusUpload = () => {
                 </div>
             )}
 
-            {/* ACTIVE AI RUNNING PLOT FOR SCANNING */}
+            {/* ── AI SCANNING LOADER ──────────────────── */}
             {isScanning && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', textAlign: 'center' }}>
-                    <div style={{ width: '60px', height: '60px', border: '4px solid rgba(102, 126, 234, 0.1)', borderTop: '4px solid #667eea', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }} />
-                    <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.4rem', fontWeight: 'bold' }}>AI is Scanning Your Syllabus...</h3>
-                    <p style={{ opacity: 0.6, fontSize: '0.9rem', maxWidth: '400px', margin: '8px auto 0', lineHeight: '1.5' }}>
-                        Gemini is parsing the syllabus file, extracting units, chapters, and topics. This can take up to 20 seconds.
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '0' }}>
+                    {/* Multi-ring spinner */}
+                    <div style={{ position: 'relative', width: '90px', height: '90px', marginBottom: '28px' }}>
+                        {/* Outer ring */}
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            border: '3px solid rgba(102, 126, 234, 0.12)',
+                            borderTop: '3px solid #667eea',
+                            borderRadius: '50%',
+                            animation: 'spin 1.1s linear infinite'
+                        }} />
+                        {/* Mid ring */}
+                        <div style={{
+                            position: 'absolute', inset: '12px',
+                            border: '3px solid rgba(79, 172, 254, 0.1)',
+                            borderTop: '3px solid #4facfe',
+                            borderBottom: '3px solid rgba(79, 172, 254, 0.4)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite reverse'
+                        }} />
+                        {/* Inner dot */}
+                        <div style={{
+                            position: 'absolute', inset: '30px',
+                            background: 'radial-gradient(circle, #667eea 0%, transparent 70%)',
+                            borderRadius: '50%',
+                            animation: 'pulse 1.5s ease-in-out infinite'
+                        }} />
+                    </div>
+                    <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.5rem', fontWeight: '800', marginBottom: '10px', background: 'linear-gradient(135deg, #667eea, #4facfe)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        AI is Scanning Your Syllabus...
+                    </h3>
+                    <p style={{ opacity: 0.6, fontSize: '0.88rem', maxWidth: '380px', lineHeight: '1.6', marginBottom: '28px' }}>
+                        Gemini is parsing the file, extracting exact unit names, chapters, and topics. This can take up to 20 seconds.
                     </p>
+                    {/* Step indicators */}
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        {['Reading File', 'Parsing Units', 'Extracting Topics'].map((step, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.7, fontSize: '0.78rem' }}>
+                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#667eea', animation: `pulse ${1 + i * 0.3}s ease-in-out infinite` }} />
+                                {step}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
-            {/* ACTIVE AI RUNNING PLOT FOR QUESTION GENERATION */}
+            {/* ── QUESTION GENERATION LOADER ────────── */}
             {isGenerating && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', textAlign: 'center' }}>
-                    <div style={{ width: '60px', height: '60px', border: '4px solid rgba(16, 185, 129, 0.1)', borderTop: '4px solid #10b981', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }} />
-                    <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.4rem', fontWeight: 'bold', color: '#10b981' }}>Generating Questions via Gemini AI...</h3>
-                    <p style={{ opacity: 0.6, fontSize: '0.9rem', maxWidth: '450px', margin: '8px auto 0', lineHeight: '1.5' }}>
-                        Distributed generator is active, writing standard questions proportional to chosen units. This can take 30–60 seconds.
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '0' }}>
+                    {/* Multi-ring spinner — green theme */}
+                    <div style={{ position: 'relative', width: '90px', height: '90px', marginBottom: '28px' }}>
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            border: '3px solid rgba(16, 185, 129, 0.12)',
+                            borderTop: '3px solid #10b981',
+                            borderRadius: '50%',
+                            animation: 'spin 1.1s linear infinite'
+                        }} />
+                        <div style={{
+                            position: 'absolute', inset: '12px',
+                            border: '3px solid rgba(52, 211, 153, 0.1)',
+                            borderTop: '3px solid #34d399',
+                            borderBottom: '3px solid rgba(52, 211, 153, 0.4)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite reverse'
+                        }} />
+                        <div style={{
+                            position: 'absolute', inset: '30px',
+                            background: 'radial-gradient(circle, #10b981 0%, transparent 70%)',
+                            borderRadius: '50%',
+                            animation: 'pulse 1.5s ease-in-out infinite'
+                        }} />
+                    </div>
+                    <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.5rem', fontWeight: '800', marginBottom: '10px', color: '#10b981' }}>
+                        Generating Questions via Gemini AI...
+                    </h3>
+                    <p style={{ opacity: 0.6, fontSize: '0.88rem', maxWidth: '420px', lineHeight: '1.6', marginBottom: '28px' }}>
+                        Writing questions for each selected topic proportional to your blueprint. This can take 30–60 seconds.
                     </p>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        {['Blueprint Applied', 'AI Composing', 'Validating Output'].map((step, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.7, fontSize: '0.78rem' }}>
+                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', animation: `pulse ${1 + i * 0.3}s ease-in-out infinite` }} />
+                                {step}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 

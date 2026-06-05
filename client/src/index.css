@@ -588,3 +588,37 @@ body {
 .option-row-frame-selected .option-custom-bullet-dot {
     transform: scale(1);
 }
+
+/* ======================================
+   MISSING KEYFRAME ANIMATIONS
+   Referenced by: SyllabusUpload, ExamRoom, LiveMonitor
+   ====================================== */
+
+/* Spinner — used by isScanning and isGenerating loaders */
+@keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Pulse — used by timer urgency, locked badge, warning states */
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.65; transform: scale(1.04); }
+}
+
+/* Shake — used by violation warning banner in ExamRoom */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15%       { transform: translateX(-6px); }
+    30%       { transform: translateX(6px); }
+    45%       { transform: translateX(-4px); }
+    60%       { transform: translateX(4px); }
+    75%       { transform: translateX(-2px); }
+    90%       { transform: translateX(2px); }
+}
+
+/* Glow pulse — used by live status dots */
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 4px 1px rgba(16, 185, 129, 0.5); }
+    50%       { box-shadow: 0 0 10px 4px rgba(16, 185, 129, 0.9); }
+}

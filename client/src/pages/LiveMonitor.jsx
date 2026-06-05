@@ -245,6 +245,10 @@ const LiveMonitor = () => {
 
     const handleStartExam = () => {
         if (socket) {
+            // Set timeLeft immediately from the known duration so the timer is available
+            // right when examStarted flips to true (avoids NaN race condition)
+            const durationSecs = examDuration * 60 || 60 * 60;
+            setTimeLeft(durationSecs);
             socket.emit('start_exam', { roomCode: code });
             setExamStarted(true);
         }
@@ -286,9 +290,12 @@ const LiveMonitor = () => {
     };
 
     const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
+        // Guard against NaN/null/undefined/negative
+        if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+        const totalSecs = Math.floor(seconds);
+        const h = Math.floor(totalSecs / 3600);
+        const m = Math.floor((totalSecs % 3600) / 60);
+        const s = totalSecs % 60;
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
@@ -392,8 +399,8 @@ const LiveMonitor = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {/* Countdown Timer — shown when exam is running */}
-                    {examStarted && (
+                    {/* Countdown Timer — shown when exam is running and time > 0 */}
+                    {examStarted && timeLeft > 0 && (
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -415,6 +422,24 @@ const LiveMonitor = () => {
                             }}>
                                 {formatTime(timeLeft)}
                             </span>
+                        </div>
+                    )}
+
+                    {/* Time's Up badge when exam timer expires */}
+                    {examStarted && timeLeft === 0 && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.5)',
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            color: '#f87171',
+                            fontWeight: 'bold'
+                        }}>
+                            <Clock size={18} />
+                            <span style={{ fontFamily: 'Space Grotesk', fontSize: '1.1rem', fontWeight: '800' }}>Time's Up!</span>
                         </div>
                     )}
 
