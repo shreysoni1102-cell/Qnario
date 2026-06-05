@@ -31,12 +31,12 @@
   Open your app locally at http://localhost:5173 and take screenshot files.
   Save them into the `./assets/` directory at the project root with the following filenames:
   
-  1. For "AI Syllabus Scanner", save as: syllabus-scanner.png
-  2. For "Question Paper & Downloads", save as: paper-download-options.png
-  3. For "Live Proctoring Monitor", save as: live-proctoring.png
-  4. For "2-Step OTP Authentication", save as: login-otp-flow.png
-  5. For "Admin System Dashboard", save as: admin-dashboard.png
-  6. For "LinkedIn Banner", save as: qnario_linkedin_banner.png
+  1. For "AI Syllabus Scanner", save as: syllabus-scanner.png  (show the animated scanning loader)
+  2. For "Question Paper & Downloads", save as: paper-download-options.png  (⚠️ use TOC syllabus so paper matches the scan)
+  3. For "Live Proctoring Monitor", save as: live-proctoring.png  (show countdown timer + student list)
+  4. For "2-Step OTP Authentication", save as: login-otp-flow.png  (show login or OTP step)
+  5. For "Admin System Dashboard", save as: admin-dashboard.png  (stats grid at /admin)
+  6. For "LinkedIn Banner", save as: qnario_linkedin_banner.png  (1584x396 promotional banner)
 -->
 
 | AI Syllabus Scanner | Question Paper & Downloads |
@@ -359,10 +359,70 @@ This is an academic capstone project. Issues and suggestions are welcome via [Gi
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Team & Contributors
 
-**Shrey Soni**
-- GitHub: [@shreysoni1102-cell](https://github.com/shreysoni1102-cell)
+<table>
+  <tr>
+    <td align="center" width="220">
+      <a href="https://github.com/shreysoni1102-cell">
+        <img src="https://github.com/shreysoni1102-cell.png" width="80" style="border-radius:50%" /><br/>
+        <strong>Shrey Soni</strong>
+      </a><br/>
+      <sub>🏗️ <b>Lead Architect & Primary Developer</b></sub><br/><br/>
+      <sub>
+        • Designed the full 3-tier microservice architecture<br/>
+        • Built the entire Node.js/Express backend & REST API<br/>
+        • Developed the Python/FastAPI AI microservice<br/>
+        • Integrated Gemini AI + Groq fallback engine<br/>
+        • Built real-time proctoring system (Socket.io)<br/>
+        • Implemented OTP auth, crash recovery, exam rooms<br/>
+        • Designed all UI/UX (React + Vite frontend)<br/>
+        • Deployed & configured Cloudflare tunnel access
+      </sub>
+    </td>
+    <td align="center" width="200">
+      <a href="https://github.com/Maitrik01">
+        <img src="https://github.com/Maitrik01.png" width="80" style="border-radius:50%" /><br/>
+        <strong>Maitrik</strong>
+      </a><br/>
+      <sub>🧪 <b>Testing & Quality Assurance</b></sub><br/><br/>
+      <sub>
+        • Functional testing of exam & proctoring flows<br/>
+        • Verified cross-device compatibility<br/>
+        • Reported edge-case bugs in live exam sessions<br/>
+        • Helped validate OTP authentication flow
+      </sub>
+    </td>
+    <td align="center" width="200">
+      <a href="https://github.com/Grishma135">
+        <img src="https://github.com/Grishma135.png" width="80" style="border-radius:50%" /><br/>
+        <strong>Grishma</strong>
+      </a><br/>
+      <sub>🎨 <b>Frontend Support</b></sub><br/><br/>
+      <sub>
+        • Assisted with UI component layout<br/>
+        • Contributed to student dashboard styling<br/>
+        • Helped refine responsive design elements
+      </sub>
+    </td>
+    <td align="center" width="200">
+      <a href="https://github.com/Vishwachothani">
+        <img src="https://github.com/Vishwachothani.png" width="80" style="border-radius:50%" /><br/>
+        <strong>Vishwa</strong>
+      </a><br/>
+      <sub>⚙️ <b>Backend Support</b></sub><br/><br/>
+      <sub>
+        • Assisted with API route testing<br/>
+        • Helped verify database model structure<br/>
+        • Contributed to server-side debugging
+      </sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+> 💡 **Core system design, AI integration, real-time proctoring, and full-stack development** by [Shrey Soni](https://github.com/shreysoni1102-cell).
 
 ---
 
