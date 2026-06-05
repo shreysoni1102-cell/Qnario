@@ -359,97 +359,42 @@ This is an academic capstone project. Issues and suggestions are welcome via [Gi
 
 ---
 
-## 👨‍💻 Team & Contributors
+## 👨‍💻 Author
 
 <table>
   <tr>
-    <!-- ========== SHREY — LEAD ========== -->
-    <td align="center" width="340" style="vertical-align:top">
+    <td align="center">
       <a href="https://github.com/shreysoni1102-cell">
         <img src="https://github.com/shreysoni1102-cell.png" width="100" style="border-radius:50%" /><br/>
         <strong>Shrey Soni</strong>
       </a><br/>
-      <sub>🏗️ <b>Lead Engineer — System Design, AI & Full Stack</b></sub><br/><br/>
+      <sub>🏗️ <b>Full Stack, AI & System Design</b></sub><br/><br/>
       <sub>
-        <b>🔧 Architecture & Backend</b><br/>
-        • Designed the complete 3-tier microservice architecture<br/>
-        • Built the entire Node.js/Express REST API from scratch<br/>
-        • Designed MongoDB schema for users, exams, attempts & results<br/>
-        • Implemented JWT session auth + OTP email verification system<br/>
-        • Built crash-resilient exam room state with JSON persistence<br/>
-        • Engineered Socket.io real-time event system for live exams<br/><br/>
-        <b>🤖 AI Microservice</b><br/>
-        • Designed & built Python FastAPI AI microservice independently<br/>
-        • Integrated Google Gemini AI for question generation<br/>
-        • Built Groq (LLaMA-3) fallback engine — zero-downtime on quota limits<br/>
-        • Engineered prompt system for 8 question types (MCQ, Short, Case Study…)<br/>
-        • Built syllabus parser that extracts exact units/topics from PDF/DOCX<br/><br/>
-        <b>🖥️ Frontend & UX</b><br/>
+        • Designed 3-tier microservice architecture (Node.js + Python + React)<br/>
+        • Built complete REST API, MongoDB schema & JWT + OTP auth system<br/>
+        • Built Python/FastAPI AI microservice with Gemini + Groq fallback<br/>
+        • Engineered syllabus parser & question generator (8 question types)<br/>
+        • Built real-time live proctoring system with Socket.io<br/>
+        • Implemented student lock/unlock, tab-switch detection & timer sync<br/>
         • Designed all UI/UX from scratch — React 18 + Vite<br/>
-        • Built live proctoring dashboard with real-time student tracking<br/>
-        • Built student lock/unlock system with teacher approval flow<br/>
-        • Implemented synchronized countdown timer across teacher & students<br/>
-        • Designed multi-step syllabus upload → blueprint → question generation flow<br/><br/>
-        <b>🌐 DevOps & Deployment</b><br/>
-        • Configured Vite proxy for seamless LAN/Cloudflare tunnel access<br/>
-        • Set up Cloudflare tunnel for external device access without static IP<br/>
-        • Managed environment configs, `.env` separation per service<br/>
-        • Maintained Git history & codebase across all 3 services
+        • Configured Cloudflare tunnel for LAN & external device access
       </sub>
-    </td>
-    <!-- ========== OTHER 3 — SUPPORTING ========== -->
-    <td style="vertical-align:top">
-      <table>
-        <tr>
-          <td align="center" width="200">
-            <a href="https://github.com/Maitrik01">
-              <img src="https://github.com/Maitrik01.png" width="70" style="border-radius:50%" /><br/>
-              <strong>Maitrik</strong>
-            </a><br/>
-            <sub>🧪 <b>Testing & QA</b></sub><br/><br/>
-            <sub>
-              • Manual testing of exam & proctoring flows<br/>
-              • Cross-device compatibility checks<br/>
-              • Bug reporting for live exam edge cases
-            </sub>
-          </td>
-        </tr>
-        <tr><td height="20"></td></tr>
-        <tr>
-          <td align="center" width="200">
-            <a href="https://github.com/Grishma135">
-              <img src="https://github.com/Grishma135.png" width="70" style="border-radius:50%" /><br/>
-              <strong>Grishma</strong>
-            </a><br/>
-            <sub>🎨 <b>Frontend Support</b></sub><br/><br/>
-            <sub>
-              • Assisted with minor UI component styling<br/>
-              • Helped with student dashboard layout adjustments
-            </sub>
-          </td>
-        </tr>
-        <tr><td height="20"></td></tr>
-        <tr>
-          <td align="center" width="200">
-            <a href="https://github.com/Vishwachothani">
-              <img src="https://github.com/Vishwachothani.png" width="70" style="border-radius:50%" /><br/>
-              <strong>Vishwa</strong>
-            </a><br/>
-            <sub>⚙️ <b>Backend Support</b></sub><br/><br/>
-            <sub>
-              • Assisted with API route testing<br/>
-              • Helped verify database model structure
-            </sub>
-          </td>
-        </tr>
-      </table>
     </td>
   </tr>
 </table>
 
 ---
 
-> 💡 **System design, AI microservice, real-time proctoring engine, and full-stack development** — entirely built by [Shrey Soni](https://github.com/shreysoni1102-cell).
+## 🤝 Acknowledgements
+
+Special thanks to the following friends who supported this project:
+
+| | Name | Role |
+|---|---|---|
+| <img src="https://github.com/Maitrik01.png" width="40" style="border-radius:50%" /> | [Maitrik](https://github.com/Maitrik01) | 🧪 Testing & QA — Tested exam flows and reported bugs |
+| <img src="https://github.com/Grishma135.png" width="40" style="border-radius:50%" /> | [Grishma](https://github.com/Grishma135) | 🎨 Frontend Support — Assisted with minor UI styling |
+| <img src="https://github.com/Vishwachothani.png" width="40" style="border-radius:50%" /> | [Vishwa](https://github.com/Vishwachothani) | ⚙️ Backend Support — Helped with API route testing |
 
 ---
+
 
