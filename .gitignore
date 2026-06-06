@@ -2,8 +2,7 @@
 node_modules/
 client/node_modules/
 server/node_modules/
-qnario/node_modules/
-qnario_node_modules/
+
 
 # Local Environment Credentials (NEVER commit these)
 .env
