@@ -30,7 +30,10 @@ const {
     getExamRoomPaper,
     submitExamRoomAnswers,
     submitPracticeAnswers,
-    getTeacherRoomsReport
+    getTeacherRoomsReport,
+    deleteSyllabusPaper,
+    deleteExamRoomReport,
+    deleteStudentResult
 } = require('../controllers/examController');
 
 const { authenticate, authorize } = require('../middleware/authMiddleware');
@@ -109,15 +112,19 @@ router.post('/syllabus/:id/generate', generateSyllabusPaper);
 router.get('/syllabus-papers', listSyllabusPapers);
 router.get('/syllabus-papers/:id', getSyllabusPaperById);
 router.patch('/syllabus-papers/:id/question/:qNo', updatePaperQuestion);
+router.delete('/syllabus-papers/:id', authenticate, authorize('teacher', 'admin'), deleteSyllabusPaper);
 
 // ==================== LIVE PROCTORED EXAM ROOMS ====================
 
 router.get('/exam-room/teacher/reports', authenticate, authorize('teacher', 'admin'), getTeacherRoomsReport);
 router.post('/exam-room/create', authenticate, authorize('teacher', 'admin'), createExamRoom);
+router.delete('/exam-room/:code', authenticate, authorize('teacher', 'admin'), deleteExamRoomReport);
 router.get('/exam-room/:code', getExamRoomInfo);
 router.get('/exam-room/:code/paper', getExamRoomPaper);
 router.post('/exam-room/:code/submit', submitExamRoomAnswers);
 
 router.post('/practice/submit', submitPracticeAnswers);
+router.delete('/results/:id', deleteStudentResult);
+
 
 module.exports = router;

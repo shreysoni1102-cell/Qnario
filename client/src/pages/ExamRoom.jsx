@@ -163,9 +163,9 @@ const ExamRoom = () => {
         };
     }, [socket, enteredRoom]);
 
-    // Timer Countdown Interval
+    // Timer Countdown Interval — keeps ticking even when locked (isLocked removed from guard)
     useEffect(() => {
-        if (!examStarted || submitted || isLocked) return;
+        if (!examStarted || submitted) return;
 
         const interval = setInterval(() => {
             setTimeLeft((prev) => {
@@ -179,7 +179,7 @@ const ExamRoom = () => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [examStarted, submitted, isLocked]);
+    }, [examStarted, submitted]);
 
     // Broadcast answering progress to monitor
     const handleSelectOption = (qNo, optionId) => {
@@ -244,9 +244,27 @@ const ExamRoom = () => {
                     <p style={{ opacity: 0.85, maxWidth: '520px', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '10px' }}>
                         You have switched tabs too many times ({tabSwitchCount}/{maxTabSwitches}). Your exam access has been temporarily locked by the proctoring system.
                     </p>
-                    <p style={{ opacity: 0.65, maxWidth: '480px', fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '30px' }}>
+                    <p style={{ opacity: 0.65, maxWidth: '480px', fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '20px' }}>
                         To continue, click the button below to send an unlock request to your teacher. Your exam will resume once they approve.
                     </p>
+                    {/* Live countdown while locked */}
+                    <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        marginBottom: '24px',
+                        color: '#f87171'
+                    }}>
+                        <Clock size={16} />
+                        <span style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                            {formatTime(timeLeft)}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>remaining</span>
+                    </div>
                     {!isUnlockRequested ? (
                         <button
                             onClick={requestTeacherUnlock}

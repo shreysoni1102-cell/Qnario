@@ -42,7 +42,8 @@ export const examAPI = {
     getResultById: (id) => API.get(`/api/results/${id}`),
     getStudentResults: (studentId) => API.get(`/api/results/student/${studentId}`),
     getPracticeTest: (params) => API.get('/api/practice-test', { params }),
-    getStudentDashboard: (studentId) => API.get(`/api/dashboard/student/${studentId}`)
+    getStudentDashboard: (studentId) => API.get(`/api/dashboard/student/${studentId}`),
+    deleteResult: (id) => API.delete(`/api/results/${id}`)
 };
 
 export const syllabusAPI = {
@@ -54,7 +55,8 @@ export const syllabusAPI = {
     generatePaper: (id, payload) => API.post(`/api/syllabus/${id}/generate`, payload),
     listPapers: (teacherEmail) => API.get('/api/syllabus-papers', { params: { teacherEmail } }),
     getPaperById: (id) => API.get(`/api/syllabus-papers/${id}`),
-    updateQuestion: (paperId, qNo, payload) => API.patch(`/api/syllabus-papers/${paperId}/question/${qNo}`, payload)
+    updateQuestion: (paperId, qNo, payload) => API.patch(`/api/syllabus-papers/${paperId}/question/${qNo}`, payload),
+    deletePaper: (id) => API.delete(`/api/syllabus-papers/${id}`)
 };
 
 export const examRoomAPI = {
@@ -63,7 +65,8 @@ export const examRoomAPI = {
     getRoomPaper: (code) => API.get(`/api/exam-room/${code}/paper`),
     submitRoomAnswers: (code, payload) => API.post(`/api/exam-room/${code}/submit`, payload),
     submitPractice: (payload) => API.post('/api/practice/submit', payload),
-    getTeacherReports: (teacherEmail) => API.get('/api/exam-room/teacher/reports', { params: { teacherEmail } })
+    getTeacherReports: (teacherEmail) => API.get('/api/exam-room/teacher/reports', { params: { teacherEmail } }),
+    deleteRoomReport: (code) => API.delete(`/api/exam-room/${code}`)
 };
 
 export default API;

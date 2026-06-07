@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { 
     LogOut, BookOpen, Award, CheckCircle, ShieldAlert, Sparkles, 
-    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle
+    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle, Trash2
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -87,6 +87,17 @@ const StudentDashboard = () => {
     const handleLogout = async () => {
         await logout();
         navigate('/');
+    };
+
+    const handleDeleteResult = async (resultId) => {
+        if (!confirm('Delete this exam result? This cannot be undone.')) return;
+        try {
+            await examAPI.deleteResult(resultId);
+            setResults(prev => prev.filter(r => (r._id || r.id) !== resultId));
+        } catch (e) {
+            console.error('Failed to delete result:', e);
+            alert('Could not delete result. Please try again.');
+        }
     };
 
     if (loading) {
@@ -632,12 +643,44 @@ const StudentDashboard = () => {
                                             <span style={{ 
                                                 fontSize: '1rem', 
                                                 fontWeight: '800', 
-                                                color: parseFloat(res.percentage) >= 50 ? '#10b981' : '#ef4444' 
+                                                color: parseFloat(res.percentage) >= 50 ? '#10b981' : '#ef4444',
+                                                display: 'block'
+                                            }}>
+                                                {res.marksObtained !== undefined ? `${res.marksObtained}/${res.totalMarks}` : res.percentage + '%'}
+                                            </span>
+                                            <p style={{ fontSize: '0.68rem', opacity: 0.5, margin: '1px 0 0' }}>Score</p>
+                                            <span style={{ 
+                                                fontSize: '0.82rem', 
+                                                fontWeight: '600', 
+                                                color: parseFloat(res.percentage) >= 50 ? '#6ee7b7' : '#fca5a5',
+                                                display: 'block',
+                                                marginTop: '4px'
                                             }}>
                                                 {res.percentage}%
                                             </span>
-                                            <p style={{ fontSize: '0.68rem', opacity: 0.5, margin: 0 }}>Accuracy</p>
+                                            <p style={{ fontSize: '0.68rem', opacity: 0.5, margin: '1px 0 0' }}>Accuracy</p>
                                         </div>
+                                        <button
+                                            onClick={() => handleDeleteResult(res._id || res.id)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#f87171',
+                                                borderRadius: '8px',
+                                                padding: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s ease',
+                                                flexShrink: 0
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                            title="Delete this result"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
                             ))

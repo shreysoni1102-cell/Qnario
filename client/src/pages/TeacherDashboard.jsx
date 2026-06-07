@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { syllabusAPI, examRoomAPI } from '../services/api';
 import { 
     LogOut, BookOpen, Sparkles, Monitor, PlusCircle, 
-    FileText, Calendar, CheckCircle, Copy, Check, ArrowRight, Play, Eye, Users
+    FileText, Calendar, CheckCircle, Copy, Check, ArrowRight, Play, Eye, Users, Trash2
 } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -89,6 +89,28 @@ const TeacherDashboard = () => {
     const handleLogout = async () => {
         await logout();
         navigate('/');
+    };
+
+    const handleDeletePaper = async (paper) => {
+        if (!confirm(`Delete the paper "${paper.subject}"? This cannot be undone.`)) return;
+        try {
+            await syllabusAPI.deletePaper(paper.id);
+            setPapers(prev => prev.filter(p => p.id !== paper.id));
+        } catch (e) {
+            console.error('Failed to delete paper:', e);
+            alert('Could not delete paper. Please try again.');
+        }
+    };
+
+    const handleDeleteReport = async (report) => {
+        if (!confirm(`Delete the exam room "${report.roomCode}" and ALL student results inside it? This cannot be undone.`)) return;
+        try {
+            await examRoomAPI.deleteRoomReport(report.roomCode);
+            setReports(prev => prev.filter(r => r.roomCode !== report.roomCode));
+        } catch (e) {
+            console.error('Failed to delete exam room report:', e);
+            alert('Could not delete exam room. Please try again.');
+        }
     };
 
     if (loading) {
@@ -383,7 +405,7 @@ const TeacherDashboard = () => {
                                         </p>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px' }}>
                                         <button 
                                             onClick={() => handleCreateRoom(paper)}
                                             className="btn btn-primary"
@@ -407,6 +429,26 @@ const TeacherDashboard = () => {
                                             title="View/Edit questions"
                                         >
                                             <Eye size={18} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeletePaper(paper)}
+                                            style={{
+                                                padding: '10px',
+                                                background: 'rgba(239, 68, 68, 0.08)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#f87171',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
+                                            title="Delete paper"
+                                        >
+                                            <Trash2 size={18} />
                                         </button>
                                     </div>
                                 </div>
@@ -474,7 +516,7 @@ const TeacherDashboard = () => {
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px' }}>
                                         <button 
                                             onClick={() => setSelectedReport(report)}
                                             className="btn btn-secondary"
@@ -488,6 +530,26 @@ const TeacherDashboard = () => {
                                             style={{ padding: '10px 16px', fontSize: '0.85rem', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none' }}
                                         >
                                             Re-Monitor
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteReport(report)}
+                                            style={{
+                                                padding: '10px',
+                                                background: 'rgba(239, 68, 68, 0.08)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#f87171',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
+                                            title="Delete exam room and all results"
+                                        >
+                                            <Trash2 size={18} />
                                         </button>
                                     </div>
                                 </div>
@@ -567,11 +629,22 @@ const TeacherDashboard = () => {
                                             <span style={{ 
                                                 fontSize: '1.1rem', 
                                                 fontWeight: '800', 
-                                                color: parseFloat(res.percentage) >= 50 ? '#34d399' : '#f87171' 
+                                                color: parseFloat(res.percentage) >= 50 ? '#34d399' : '#f87171',
+                                                display: 'block'
+                                            }}>
+                                                {res.totalScore}/{res.totalMarks}
+                                            </span>
+                                            <p style={{ fontSize: '0.65rem', opacity: 0.5, margin: '2px 0 0' }}>Score</p>
+                                            <span style={{ 
+                                                fontSize: '0.85rem', 
+                                                fontWeight: '600', 
+                                                color: parseFloat(res.percentage) >= 50 ? '#6ee7b7' : '#fca5a5',
+                                                display: 'block',
+                                                marginTop: '4px'
                                             }}>
                                                 {res.percentage}%
                                             </span>
-                                            <p style={{ fontSize: '0.65rem', opacity: 0.5, margin: 0 }}>Score: {res.totalScore}/{res.totalMarks}</p>
+                                            <p style={{ fontSize: '0.65rem', opacity: 0.5, margin: '1px 0 0' }}>Accuracy</p>
                                         </div>
                                     </div>
                                 ))

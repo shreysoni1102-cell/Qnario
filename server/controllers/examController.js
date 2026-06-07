@@ -1182,6 +1182,80 @@ const submitPracticeAnswers = (req, res) => {
 };
 
 /**
+ * Delete a generated syllabus paper by ID.
+ */
+const deleteSyllabusPaper = (req, res) => {
+    try {
+        const { id } = req.params;
+        const papers = readLocalData(fallbackPapersFile);
+        const index = papers.findIndex(p => p.id === id);
+        if (index === -1) return res.status(404).json({ success: false, error: 'Paper not found.' });
+        papers.splice(index, 1);
+        writeLocalData(fallbackPapersFile, papers);
+        return res.json({ success: true, message: 'Paper deleted successfully.' });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+/**
+ * Delete an exam room report by code and remove all associated student results.
+ */
+const deleteExamRoomReport = (req, res) => {
+    try {
+        const { code } = req.params;
+        const upperCode = code.toUpperCase();
+        if (!examRooms[upperCode]) {
+            return res.status(404).json({ success: false, error: 'Exam room not found.' });
+        }
+        delete examRooms[upperCode];
+
+        // Persist updated rooms
+        const examRoomsFile = path.join(__dirname, '..', 'exam-rooms.json');
+        try {
+            const fs = require('fs');
+            fs.writeFileSync(examRoomsFile, JSON.stringify(examRooms, null, 2), 'utf8');
+        } catch (e) {
+            console.warn('Could not persist exam-rooms.json:', e.message);
+        }
+
+        // Remove all associated student results from results.json
+        const fallbackResults = path.join(__dirname, '..', 'results.json');
+        const allResults = readLocalData(fallbackResults);
+        const filtered = allResults.filter(r => String(r.roomCode).toUpperCase() !== upperCode);
+        writeLocalData(fallbackResults, filtered);
+
+        return res.json({ success: true, message: 'Exam room and all associated results deleted.' });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+/**
+ * Delete a single student result by result ID.
+ */
+const deleteStudentResult = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Remove from local results.json
+        const fallbackResults = path.join(__dirname, '..', 'results.json');
+        const allResults = readLocalData(fallbackResults);
+        const filtered = allResults.filter(r => r.id !== id);
+        writeLocalData(fallbackResults, filtered);
+
+        // Also try to remove from MongoDB if ObjectId valid
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            await StudentResult.findByIdAndDelete(id).catch(() => {});
+        }
+
+        return res.json({ success: true, message: 'Result deleted successfully.' });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+/**
  * Compiles a list of created exam rooms and all student scores for a given teacher.
  */
 const getTeacherRoomsReport = (req, res) => {
@@ -1269,11 +1343,14 @@ module.exports = {
     listSyllabusPapers,
     getSyllabusPaperById,
     updatePaperQuestion,
+    deleteSyllabusPaper,
     createExamRoom,
     getExamRoomInfo,
     getExamRoomPaper,
     submitExamRoomAnswers,
     submitPracticeAnswers,
     getTeacherRoomsReport,
+    deleteExamRoomReport,
+    deleteStudentResult,
     examRooms // Exporting object ref for WebSocket connection logic to utilize
 };

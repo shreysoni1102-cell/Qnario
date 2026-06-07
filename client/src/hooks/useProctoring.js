@@ -73,15 +73,19 @@ export const useProctoring = (roomCode, socket, onForceSubmit, isEnabled = false
                 return nextTabCount;
             });
         } else {
-            // Non-tab violations: show warning, force-submit after MAX_VIOLATIONS total
+            // Non-tab violations: show warning. Lock when limit exceeded — do NOT auto-submit.
+            // Exam will only auto-submit when the countdown timer runs out.
             const totalNow = anomalyCountRef.current;
             if (totalNow >= MAX_VIOLATIONS) {
-                isLockedRef.current = true;
-                setIsLocked(true);
-                setWarningMsg('MAXIMUM VIOLATIONS EXCEEDED! Exam is locked and will be submitted automatically.');
-                setTimeout(() => {
-                    if (onForceSubmitRef.current) onForceSubmitRef.current();
-                }, 2000);
+                if (!isLockedRef.current) {
+                    isLockedRef.current = true;
+                    setIsLocked(true);
+                    setIsUnlockRequested(false);
+                    setWarningMsg('Too many proctoring violations. Your exam is now LOCKED. Request your teacher to unlock to continue.');
+                    if (socket) {
+                        socket.emit('student_locked', { roomCode, reason: `Max violations reached (${totalNow})` });
+                    }
+                }
             } else {
                 setWarningMsg(`Proctoring violation detected: '${type}'. This has been reported to your teacher.`);
                 setTimeout(() => setWarningMsg(''), 5000);
@@ -136,9 +140,11 @@ export const useProctoring = (roomCode, socket, onForceSubmit, isEnabled = false
             isLockedRef.current = false;
             setIsLocked(false);
             setIsUnlockRequested(false);
-            // Reset tab switch count to give them a fresh start
+            // Reset both tab switch and anomaly counts to give them a fresh start
             setTabSwitchCount(0);
             tabSwitchCountRef.current = 0;
+            setAnomalyCount(0);
+            anomalyCountRef.current = 0;
             setWarningMsg('Your teacher has unlocked your exam. You may continue. Please stay focused!');
             setTimeout(() => setWarningMsg(''), 6000);
             // Re-enter fullscreen on unlock
