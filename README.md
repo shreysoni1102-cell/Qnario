@@ -79,6 +79,8 @@ This is the heart of Qnario. Designed to **save teachers hours of work**:
 - Students join from any browser (laptop or phone)
 - Teacher sees **real-time** list of who joined and who submitted
 - **Anti-cheat detection**: Tab switch or focus loss triggers instant alert
+- **Student Lockout & Approval Flow**: Students violating proctoring policies (such as tab switches) are automatically locked out, requiring teacher approval/unlock from the Live Monitor to resume.
+- **Synchronized Real-time Timer**: Teacher Live Monitor and Student exam room show a fully synchronized, accurate countdown timer.
 - **Crash recovery**: Room state saved every 5 seconds — survives restarts
 
 ### 👤 Student Features
@@ -317,20 +319,42 @@ DEBUG=True
 | `POST` | `/send-signup-otp` | Send 6-digit OTP to email |
 | `POST` | `/signup` | Verify OTP + create account |
 | `POST` | `/login` | Authenticate user |
-| `POST` | `/logout` | End session |
+| `POST` | `/logout` | End session (authenticated) |
+| `GET` | `/profile` | Get current user profile (authenticated) |
 | `POST` | `/forgot-password` | Send password reset email |
-| `POST` | `/reset-password` | Set new password |
-| `GET` | `/profile` | Get current user |
+| `POST` | `/reset-password` | Set new password using token |
+| `POST` | `/admin-login` | Administrative portal login |
+| `GET` | `/admin/all-users` | Retrieve all user accounts (Admin Only) |
+| `GET` | `/admin/user/:id` | Retrieve single user details (Admin Only) |
+| `PUT` | `/admin/user/:id` | Update single user account details (Admin Only) |
+| `DELETE` | `/admin/user/:id` | Delete user account (Admin Only) |
 
 ### Core Endpoints (`/api/`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/syllabus/upload` | Upload syllabus file |
-| `POST` | `/syllabus/:id/generate` | AI-generate question paper |
-| `GET` | `/practice-test` | Get AI practice questions |
-| `POST` | `/exam-room/create` | Create live exam room |
-| `POST` | `/exam-room/:code/submit` | Submit exam answers |
-| `GET` | `/dashboard/student/:id` | Student stats |
+| **Syllabus Operations** | | |
+| `POST` | `/syllabus/upload` | Upload syllabus file (PDF, DOCX, JPG, PNG) |
+| `GET` | `/syllabus/list` | Retrieve list of all uploaded syllabi |
+| `GET` | `/syllabus/:id` | Retrieve syllabus structure & units |
+| `POST` | `/syllabus/:id/generate` | AI-generate question paper from syllabus |
+| `GET` | `/syllabus-papers` | List all generated syllabus papers |
+| `GET` | `/syllabus-papers/:id` | Retrieve details of specific generated paper |
+| `PATCH` | `/syllabus-papers/:id/question/:qNo` | Edit specific question in paper |
+| `DELETE` | `/syllabus-papers/:id` | Delete generated syllabus paper (Teacher/Admin Only) |
+| **Exam Rooms & Proctoring** | | |
+| `POST` | `/exam-room/create` | Create live exam room (Teacher/Admin Only) |
+| `GET` | `/exam-room/teacher/reports` | Get history reports of exam rooms (Teacher/Admin Only) |
+| `DELETE` | `/exam-room/:code` | Delete exam room report (Teacher/Admin Only) |
+| `GET` | `/exam-room/:code` | Get details/status of active exam room |
+| `GET` | `/exam-room/:code/paper` | Get question paper for active exam room |
+| `POST` | `/exam-room/:code/submit` | Submit student exam room answers |
+| **Practice & Results** | | |
+| `GET` | `/practice-test` | Get custom practice questions |
+| `POST` | `/practice/submit` | Submit practice test answers |
+| `GET` | `/results/student/:studentId` | Get all results/attempts for a student |
+| `GET` | `/results/:resultId` | Get specific score & AI feedback report |
+| `DELETE` | `/results/:id` | Delete student result |
+| `GET` | `/dashboard/student/:studentId` | Get student dashboard stats (streaks, trends) |
 
 ---
 
@@ -350,6 +374,9 @@ DEBUG=True
 
 **5. Vite Proxy for LAN Access**
 > The Vite dev server proxies all `/api` requests to the Node backend. This means the frontend works identically from `localhost`, `192.168.x.x`, or any LAN IP — no hardcoded URLs needed.
+
+**6. Deletion & Administrative Controls**
+> Implemented secure, role-restricted deletion flows (`DELETE` requests) for exam rooms, papers, and results, allowing teachers/admins to prune outdated records directly from the UI without database shell access.
 
 ---
 
@@ -392,7 +419,7 @@ Special thanks to the following friends who supported this project:
 | | Name | Role |
 |---|---|---|
 | <img src="https://github.com/Maitrik01.png" width="40" style="border-radius:50%" /> | [Maitrik](https://github.com/Maitrik01) | 🧪 Testing & QA — Tested exam flows and reported bugs |
-| <img src="https://github.com/Grishma135.png" width="40" style="border-radius:50%" /> | [Grishma](https://github.com/Grishma135) | 🎨 Frontend Support — Assisted with minor UI styling |
+| <img src="https://github.com/Grishma135.png" width="40" style="border-radius:50%" /> | [Grishma](https://github.com/Grishma135) | 🎨 Frontend Support — Assisted in UI/UX styling |
 | <img src="https://github.com/Vishwachothani.png" width="40" style="border-radius:50%" /> | [Vishwa](https://github.com/Vishwachothani) | ⚙️ Backend Support — Helped with API route testing |
 
 ---
