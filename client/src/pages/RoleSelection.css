@@ -10,40 +10,7 @@
     background: #0a0e27;
 }
 
-/* Backdrops */
-.bg-mesh-wrapper {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    overflow: hidden;
-}
-
-.mesh-gradient {
-    position: absolute;
-    width: 200%;
-    height: 200%;
-    background:
-        radial-gradient(circle at 20% 30%, #667eea 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, #764ba2 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, #4facfe 0%, transparent 40%);
-    animation: moveRoleMesh 20s infinite alternate ease-in-out;
-    filter: blur(120px);
-    opacity: 0.7;
-}
-
-@keyframes moveRoleMesh {
-    0% { transform: translate(-10%, -10%); }
-    100% { transform: translate(10%, 10%); }
-}
-
-.mesh-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-}
+/* Backdrops (Consolidated to index.css) */
 
 .mesh-glow {
     position: absolute;

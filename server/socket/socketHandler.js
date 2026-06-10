@@ -22,7 +22,7 @@ const registerSocketHandlers = (io) => {
 
         // 2. Student joins exam room
         socket.on('student_join', ({ roomCode, studentName, studentEmail }) => {
-            if (!roomCode) return;
+            if (!roomCode || !studentEmail) return;
             
             const room = examRooms[roomCode];
             if (!room) {
@@ -32,14 +32,15 @@ const registerSocketHandlers = (io) => {
 
             socket.join(`exam_${roomCode}`);
             
-            // Register student in-memory
-            room.students[socket.id] = {
+            // Register student in-memory by unique email to prevent duplicates on reconnect
+            room.students[studentEmail] = {
+                socketId: socket.id,
                 name: studentName,
                 email: studentEmail,
-                progress: 0,
-                answered: 0,
+                progress: room.students[studentEmail]?.progress || 0,
+                answered: room.students[studentEmail]?.answered || 0,
                 status: 'active',
-                joinedAt: new Date()
+                joinedAt: room.students[studentEmail]?.joinedAt || new Date()
             };
 
             // Alert teacher monitor
@@ -47,7 +48,7 @@ const registerSocketHandlers = (io) => {
                 socketId: socket.id,
                 name: studentName,
                 email: studentEmail,
-                count: Object.keys(room.students).length
+                count: Object.values(room.students).filter(s => s.status !== 'disconnected').length
             });
 
             // Confirm join status back to student
@@ -57,7 +58,7 @@ const registerSocketHandlers = (io) => {
                 startTime: room.startTime
             });
 
-            console.log(`🎓 [Socket] Student '${studentName}' joined room code: ${roomCode}`);
+            console.log(`🎓 [Socket] Student '${studentName}' (${studentEmail}) joined room code: ${roomCode}`);
         });
 
         // 3. Student updates answering progress
@@ -65,19 +66,23 @@ const registerSocketHandlers = (io) => {
             if (!roomCode) return;
             
             const room = examRooms[roomCode];
-            if (room && room.students[socket.id]) {
-                const student = room.students[socket.id];
-                student.answered = answered;
-                student.progress = total > 0 ? Math.round((answered / total) * 100) : 0;
+            if (room) {
+                // Find student by socketId
+                const student = Object.values(room.students).find(s => s.socketId === socket.id);
+                if (student) {
+                    student.answered = answered;
+                    student.progress = total > 0 ? Math.round((answered / total) * 100) : 0;
 
-                // Sync with teacher screen
-                io.to(`teacher_${roomCode}`).emit('progress_update', {
-                    socketId: socket.id,
-                    name: student.name,
-                    answered,
-                    total,
-                    progress: student.progress
-                });
+                    // Sync with teacher screen
+                    io.to(`teacher_${roomCode}`).emit('progress_update', {
+                        socketId: socket.id,
+                        email: student.email,
+                        name: student.name,
+                        answered,
+                        total,
+                        progress: student.progress
+                    });
+                }
             }
         });
 
@@ -138,10 +143,13 @@ const registerSocketHandlers = (io) => {
             if (!roomCode) return;
 
             const room = examRooms[roomCode];
-            const name = room?.students[socket.id]?.name || 'Unknown student';
+            const student = Object.values(room?.students || {}).find(s => s.socketId === socket.id);
+            const name = student?.name || 'Unknown student';
+            const email = student?.email || '';
 
             io.to(`teacher_${roomCode}`).emit('anomaly_alert', {
                 studentName: name,
+                studentEmail: email,
                 type,
                 time: new Date().toLocaleTimeString()
             });
@@ -153,21 +161,19 @@ const registerSocketHandlers = (io) => {
             if (!roomCode) return;
 
             const room = examRooms[roomCode];
-            const name = room?.students[socket.id]?.name || 'Unknown student';
+            const student = Object.values(room?.students || {}).find(s => s.socketId === socket.id);
+            if (student) {
+                student.status = 'locked';
+                console.warn(`[Proctor] Student '${student.name}' is now locked in room ${roomCode}: ${reason}`);
 
-            // Update student status in room memory
-            if (room && room.students[socket.id]) {
-                room.students[socket.id].status = 'locked';
+                // Alert teacher so they can see the locked student
+                io.to(`teacher_${roomCode}`).emit('anomaly_alert', {
+                    studentName: student.name,
+                    studentEmail: student.email,
+                    type: `EXAM LOCKED — ${reason}`,
+                    time: new Date().toLocaleTimeString()
+                });
             }
-
-            console.warn(`[Proctor] Student '${name}' is now locked in room ${roomCode}: ${reason}`);
-
-            // Alert teacher so they can see the locked student
-            io.to(`teacher_${roomCode}`).emit('anomaly_alert', {
-                studentName: name,
-                type: `EXAM LOCKED — ${reason}`,
-                time: new Date().toLocaleTimeString()
-            });
         });
 
         // 10. Student requests teacher to unlock their locked exam
@@ -175,25 +181,22 @@ const registerSocketHandlers = (io) => {
             if (!roomCode) return;
 
             const room = examRooms[roomCode];
-            const name = room?.students[socket.id]?.name || 'Unknown student';
-            const reason = room?.students[socket.id]?.status === 'locked'
-                ? 'Too many tab switches'
-                : 'Proctor violation';
+            const student = Object.values(room?.students || {}).find(s => s.socketId === socket.id);
+            if (student) {
+                student.unlockRequested = true;
+                student.unlockSocketId = socket.id;
+                const reason = student.status === 'locked' ? 'Too many tab switches' : 'Proctor violation';
 
-            // Store unlock request in room memory so teacher knows who to unlock
-            if (room && room.students[socket.id]) {
-                room.students[socket.id].unlockRequested = true;
-                room.students[socket.id].unlockSocketId = socket.id;
+                console.log(`[Proctor] '${student.name}' requested teacher unlock in room ${roomCode}`);
+
+                io.to(`teacher_${roomCode}`).emit('unlock_request', {
+                    socketId: socket.id,
+                    studentEmail: student.email,
+                    studentName: student.name,
+                    reason,
+                    time: new Date().toLocaleTimeString()
+                });
             }
-
-            console.log(`[Proctor] '${name}' requested teacher unlock in room ${roomCode}`);
-
-            io.to(`teacher_${roomCode}`).emit('unlock_request', {
-                socketId: socket.id,
-                studentName: name,
-                reason,
-                time: new Date().toLocaleTimeString()
-            });
         });
 
         // 11. Teacher unlocks a specific locked student
@@ -201,9 +204,12 @@ const registerSocketHandlers = (io) => {
             if (!roomCode || !targetSocketId) return;
 
             const room = examRooms[roomCode];
-            if (room && room.students[targetSocketId]) {
-                room.students[targetSocketId].status = 'active';
-                room.students[targetSocketId].unlockRequested = false;
+            if (room) {
+                const student = Object.values(room.students).find(s => s.socketId === targetSocketId);
+                if (student) {
+                    student.status = 'active';
+                    student.unlockRequested = false;
+                }
             }
 
             // Send unlock confirmation directly to the student
@@ -211,21 +217,23 @@ const registerSocketHandlers = (io) => {
             console.log(`[Proctor] Teacher unlocked student ${targetSocketId} in room ${roomCode}`);
         });
 
-        // 12. Clean up student registration upon connection drops
+        // 12. Clean up student registration upon connection drops (mark offline rather than deleting)
         socket.on('disconnect', () => {
             for (const code of Object.keys(examRooms)) {
                 const room = examRooms[code];
-                if (room.students[socket.id]) {
-                    const name = room.students[socket.id].name;
-                    delete room.students[socket.id];
+                const studentEntry = Object.entries(room.students).find(([email, s]) => s.socketId === socket.id);
+                if (studentEntry) {
+                    const [email, student] = studentEntry;
+                    student.status = 'disconnected';
 
                     // Inform teacher monitor
                     io.to(`teacher_${code}`).emit('student_left', {
                         socketId: socket.id,
-                        name,
-                        count: Object.keys(room.students).length
+                        email: email,
+                        name: student.name,
+                        count: Object.values(room.students).filter(s => s.status !== 'disconnected').length
                     });
-                    console.log(`🔌 [Socket] Student '${name}' disconnected.`);
+                    console.log(`🔌 [Socket] Student '${student.name}' disconnected.`);
                 }
             }
         });

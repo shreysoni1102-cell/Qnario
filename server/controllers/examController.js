@@ -1091,6 +1091,12 @@ const submitExamRoomAnswers = (req, res) => {
             submittedAt: new Date()
         };
 
+        // Update student status in room memory
+        if (room && room.students && room.students[studentEmail]) {
+            room.students[studentEmail].status = 'submitted';
+            room.students[studentEmail].progress = 100;
+        }
+
         // Cache results locally
         const fallbackResults = path.join(__dirname, '..', 'results.json');
         const results = readLocalData(fallbackResults);

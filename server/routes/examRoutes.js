@@ -124,7 +124,7 @@ router.get('/exam-room/:code/paper', getExamRoomPaper);
 router.post('/exam-room/:code/submit', submitExamRoomAnswers);
 
 router.post('/practice/submit', submitPracticeAnswers);
-router.delete('/results/:id', deleteStudentResult);
+router.delete('/results/:id', authenticate, authorize('teacher', 'admin'), deleteStudentResult);
 
 
 module.exports = router;

@@ -171,6 +171,7 @@ export const useProctoring = (roomCode, socket, onForceSubmit, isEnabled = false
 
         // Window blur (click outside browser window)
         const handleWindowBlur = () => {
+            if (document.hidden) return;
             triggerAnomaly('Window Focus Lost', false);
         };
 

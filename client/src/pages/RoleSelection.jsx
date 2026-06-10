@@ -84,9 +84,9 @@ const RoleSelection = () => {
             </div>
 
             {/* Glowing Mesh Backdrop */}
-            <div className="bg-mesh-wrapper">
-                <div className="mesh-gradient"></div>
-                <div className="mesh-grid"></div>
+            <div className="qnario-bg-mesh-wrapper">
+                <div className="qnario-mesh-gradient"></div>
+                <div className="qnario-mesh-grid"></div>
                 <div className="mesh-glow orb1"></div>
                 <div className="mesh-glow orb2"></div>
             </div>

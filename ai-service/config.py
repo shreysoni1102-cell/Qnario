@@ -1,5 +1,14 @@
 import os
+import sys
 from dotenv import load_dotenv
+
+# Reconfigure stdout/stderr encoding on Windows to prevent UnicodeEncodeError with emojis
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
 
 # Initialize dot env mappings
 load_dotenv()

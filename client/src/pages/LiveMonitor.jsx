@@ -20,7 +20,7 @@ const LiveMonitor = () => {
     const [errorMsg, setErrorMsg] = useState('');
 
     // Live Socket States
-    const [students, setStudents] = useState({}); // { socketId: { name, email, progress, answered, status } }
+    const [students, setStudents] = useState({}); // { email: { socketId, name, email, progress, answered, status } }
     const [anomalies, setAnomalies] = useState([]); // [{ name, type, time }]
     const [doubts, setDoubts] = useState([]); // [{ name, message, time }]
     const [unlockRequests, setUnlockRequests] = useState([]); // [{ socketId, name, reason, time }]
@@ -119,18 +119,19 @@ const LiveMonitor = () => {
         socket.on('student_joined', ({ socketId, name, email }) => {
             setStudents(prev => ({
                 ...prev,
-                [socketId]: { name, email, progress: 0, answered: 0, status: 'active' }
+                [email]: { socketId, name, email, progress: prev[email]?.progress || 0, answered: prev[email]?.answered || 0, status: 'active' }
             }));
         });
 
         // 3. Student Progress Updates
-        socket.on('progress_update', ({ socketId, answered, total, progress }) => {
+        socket.on('progress_update', ({ socketId, email, answered, total, progress }) => {
             setStudents(prev => {
-                if (!prev[socketId]) return prev;
+                if (!prev[email]) return prev;
                 return {
                     ...prev,
-                    [socketId]: {
-                        ...prev[socketId],
+                    [email]: {
+                        ...prev[email],
+                        socketId,
                         progress,
                         answered
                     }
@@ -139,7 +140,7 @@ const LiveMonitor = () => {
         });
 
         // 4. Anomaly Warning signals
-        socket.on('anomaly_alert', ({ studentName, type, time }) => {
+        socket.on('anomaly_alert', ({ studentName, studentEmail, type, time }) => {
             setAnomalies(prev => [
                 { name: studentName, type, time },
                 ...prev
@@ -147,13 +148,12 @@ const LiveMonitor = () => {
             
             // Set student state to warning alert
             setStudents(prev => {
-                const target = Object.entries(prev).find(([_, s]) => s.name === studentName);
-                if (!target) return prev;
-                const [sId, sData] = target;
+                const targetEmail = studentEmail || Object.keys(prev).find(e => prev[e].name === studentName);
+                if (!targetEmail || !prev[targetEmail]) return prev;
                 return {
                     ...prev,
-                    [sId]: {
-                        ...sData,
+                    [targetEmail]: {
+                        ...prev[targetEmail],
                         status: 'warning'
                     }
                 };
@@ -171,13 +171,11 @@ const LiveMonitor = () => {
         // 6. Student Submits Exam
         socket.on('student_submitted', ({ studentEmail, studentName, percentage }) => {
             setStudents(prev => {
-                const target = Object.entries(prev).find(([_, s]) => s.email === studentEmail);
-                if (!target) return prev;
-                const [sId, sData] = target;
+                if (!prev[studentEmail]) return prev;
                 return {
                     ...prev,
-                    [sId]: {
-                        ...sData,
+                    [studentEmail]: {
+                        ...prev[studentEmail],
                         status: 'submitted',
                         score: percentage
                     }
@@ -186,13 +184,14 @@ const LiveMonitor = () => {
         });
 
         // 7. Student leaves or disconnects
-        socket.on('student_left', ({ socketId, name }) => {
+        socket.on('student_left', ({ socketId, email, name }) => {
             setStudents(prev => {
-                if (!prev[socketId]) return prev;
+                const targetEmail = email || Object.keys(prev).find(e => prev[e].socketId === socketId);
+                if (!targetEmail || !prev[targetEmail]) return prev;
                 return {
                     ...prev,
-                    [socketId]: {
-                        ...prev[socketId],
+                    [targetEmail]: {
+                        ...prev[targetEmail],
                         status: 'disconnected'
                     }
                 };
@@ -200,7 +199,7 @@ const LiveMonitor = () => {
         });
 
         // 8. Student locked and requesting unlock
-        socket.on('unlock_request', ({ socketId, studentName, reason, time }) => {
+        socket.on('unlock_request', ({ socketId, studentEmail, studentName, reason, time }) => {
             setUnlockRequests(prev => {
                 // Avoid duplicates
                 const exists = prev.find(r => r.socketId === socketId);
@@ -212,11 +211,12 @@ const LiveMonitor = () => {
             });
             // Also mark student as locked
             setStudents(prev => {
-                if (!prev[socketId]) return prev;
+                const targetEmail = studentEmail || Object.keys(prev).find(e => prev[e].socketId === socketId);
+                if (!targetEmail || !prev[targetEmail]) return prev;
                 return {
                     ...prev,
-                    [socketId]: {
-                        ...prev[socketId],
+                    [targetEmail]: {
+                        ...prev[targetEmail],
                         status: 'locked'
                     }
                 };
@@ -278,11 +278,12 @@ const LiveMonitor = () => {
         setUnlockRequests(prev => prev.filter(r => r.socketId !== req.socketId));
         // Update student status back to active
         setStudents(prev => {
-            if (!prev[req.socketId]) return prev;
+            const targetEmail = Object.keys(prev).find(e => prev[e].socketId === req.socketId);
+            if (!targetEmail || !prev[targetEmail]) return prev;
             return {
                 ...prev,
-                [req.socketId]: {
-                    ...prev[req.socketId],
+                [targetEmail]: {
+                    ...prev[targetEmail],
                     status: 'active'
                 }
             };
@@ -486,9 +487,9 @@ const LiveMonitor = () => {
                                 <p style={{ fontSize: '0.85rem' }}>Waiting for students to join using code...</p>
                             </div>
                         ) : (
-                            studentList.map(([socketId, s]) => (
+                            studentList.map(([email, s]) => (
                                 <div 
-                                    key={socketId}
+                                    key={email}
                                     style={{
                                         display: 'grid',
                                         gridTemplateColumns: '1.5fr 2fr 1fr',

@@ -43,6 +43,19 @@ const ExamRoom = () => {
         fetchRoomData();
     }, [user, code]);
 
+    useEffect(() => {
+        if (!user || !code) return;
+        const storageKey = `qnario_exam_draft_${code}_${user.email}`;
+        try {
+            const savedAnswers = localStorage.getItem(storageKey);
+            if (savedAnswers) {
+                setAnswers(JSON.parse(savedAnswers));
+            }
+        } catch (err) {
+            console.error('Error parsing saved answers:', err);
+        }
+    }, [user, code]);
+
     const fetchRoomData = async () => {
         try {
             const infoRes = await examRoomAPI.getRoomInfo(code);
@@ -79,6 +92,11 @@ const ExamRoom = () => {
                 if (document.fullscreenElement) {
                     document.exitFullscreen().catch(e => console.warn(e));
                 }
+                // Clear localStorage draft on successful submit
+                if (user && code) {
+                    const storageKey = `qnario_exam_draft_${code}_${user.email}`;
+                    localStorage.removeItem(storageKey);
+                }
                 confetti({
                     particleCount: 200,
                     spread: 90,
@@ -114,7 +132,8 @@ const ExamRoom = () => {
         try {
             // 1. Fetch paper details
             const paperRes = await examRoomAPI.getRoomPaper(code);
-            setPaper(paperRes.data.paper);
+            const paperData = paperRes.data.paper;
+            setPaper(paperData);
             
             // 2. Request Fullscreen locks
             enterFullscreen();
@@ -127,6 +146,25 @@ const ExamRoom = () => {
                     studentName: user.name,
                     studentEmail: user.email
                 });
+
+                // Broadcast current restored answers progress if we have any saved answers
+                const storageKey = `qnario_exam_draft_${code}_${user.email}`;
+                const savedAnswersRaw = localStorage.getItem(storageKey);
+                if (savedAnswersRaw) {
+                    try {
+                        const parsedAnswers = JSON.parse(savedAnswersRaw);
+                        const answeredCount = Object.keys(parsedAnswers).length;
+                        if (answeredCount > 0) {
+                            socket.emit('student_progress', {
+                                roomCode: code,
+                                answered: answeredCount,
+                                total: paperData?.questions?.length || 0
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error sending restored progress:', e);
+                    }
+                }
             }
         } catch (e) {
             console.error(e);
@@ -190,6 +228,12 @@ const ExamRoom = () => {
             [qNo]: optionId
         };
         setAnswers(newAnswers);
+
+        // Save to localStorage
+        if (user && code) {
+            const storageKey = `qnario_exam_draft_${code}_${user.email}`;
+            localStorage.setItem(storageKey, JSON.stringify(newAnswers));
+        }
 
         // Notify socket progress updates
         if (socket) {

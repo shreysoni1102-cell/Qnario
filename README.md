@@ -82,6 +82,7 @@ This is the heart of Qnario. Designed to **save teachers hours of work**:
 - **Student Lockout & Approval Flow**: Students violating proctoring policies (such as tab switches) are automatically locked out, requiring teacher approval/unlock from the Live Monitor to resume.
 - **Synchronized Real-time Timer**: Teacher Live Monitor and Student exam room show a fully synchronized, accurate countdown timer.
 - **Crash recovery**: Room state saved every 5 seconds — survives restarts
+- **Student Exam Recovery (Local Storage)**: Answer drafts are automatically saved to `localStorage` keyed by student email and room code. If the page is refreshed or browser crashes, their progress is instantly recovered upon rejoining the exam and synced back to the teacher's monitor.
 
 ### 👤 Student Features
 - Join exam via 6-digit room code
@@ -199,6 +200,7 @@ Qnario/
 ├── ai-service/                # Python FastAPI Microservice
 │   ├── services/
 │   │   └── gemini_service.py  # Gemini + Groq AI engine
+│   ├── README.md              # Setup & API Reference
 │   ├── main.py                # FastAPI app + endpoints
 │   └── config.py
 │
@@ -377,6 +379,9 @@ DEBUG=True
 
 **6. Deletion & Administrative Controls**
 > Implemented secure, role-restricted deletion flows (`DELETE` requests) for exam rooms, papers, and results, allowing teachers/admins to prune outdated records directly from the UI without database shell access.
+
+**7. Local Storage Student Answer Recovery**
+> Implemented active draft saving in `localStorage` keyed by student email and room code. This ensures student answer progress is fully protected against accidental page refreshes, tab closes, or browser crashes, and syncs progress instantly back to the teacher's Live Monitor upon reconnecting.
 
 ---
 

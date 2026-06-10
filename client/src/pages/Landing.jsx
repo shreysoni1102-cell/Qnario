@@ -37,9 +37,9 @@ const Landing = () => {
     return (
         <div className="landing-page-wrapper">
             {/* Animated Cosmic Grid Backdrop */}
-            <div className="landing-bg-wrapper">
-                <div className="landing-gradient-mesh"></div>
-                <div className="landing-grid-overlay"></div>
+            <div className="qnario-bg-mesh-wrapper">
+                <div className="qnario-mesh-gradient"></div>
+                <div className="qnario-mesh-grid"></div>
             </div>
 
             {/* Navbar */}

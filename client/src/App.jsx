@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import RoleSelection from './pages/RoleSelection';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentPractice from './pages/StudentPractice';
 import ExamRoom from './pages/ExamRoom';
@@ -49,6 +50,7 @@ const AppContent = () => {
                 <Route path="/role-selection" element={<RoleSelection />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 {/* Secure Student portals */}
                 <Route 
