@@ -10,7 +10,6 @@ const Question = require('../models/Question');
 const StudentAttempt = require('../models/StudentAttempt');
 const StudentResult = require('../models/StudentResult');
 const Subject = require('../models/Subject');
-const Topic = require('../models/Topic');
 const GeneratedQuestion = require('../models/GeneratedQuestion');
 const User = require('../models/User');
 
@@ -870,6 +869,45 @@ const generateSyllabusPaper = async (req, res) => {
 
         papers.push(paper);
         writeLocalData(fallbackPapersFile, papers);
+
+        // 💾 Also persist to MongoDB GeneratedQuestion collection so data is visible in Compass
+        try {
+            const gqDoc = new GeneratedQuestion({
+                teacherEmail: syllabus.teacherEmail,
+                paperId: paperId,
+                syllabusId: syllabus.id,
+                subject: syllabus.subject,
+                className: syllabus.className || null,
+                paperType: paperType || 'Custom',
+                level: bloomsLevel || 'Mixed',
+                difficulty: difficulty || 'Medium',
+                language: language || 'English',
+                duration: duration || null,
+                marks: String(totalMarks || allQuestions.length),
+                questionType: sectionList.map(s => s.type || 'MCQ').join(', '),
+                status: 'draft',
+                questions: allQuestions.map((q, i) => ({
+                    questionNumber: q.questionNo || i + 1,
+                    text: q.text || q.question || '',
+                    section: q.section || '',
+                    type: q.type || 'MCQ',
+                    options: Array.isArray(q.options)
+                        ? q.options.map(o => (typeof o === 'string' ? o : o.text || ''))
+                        : [],
+                    answer: {
+                        correctOption: q.correctAnswer || q.answer?.correctOption || '',
+                        explanation: q.answer?.explanation || ''
+                    },
+                    marks: q.marks || 1,
+                    difficulty: q.difficulty || difficulty || 'Medium'
+                }))
+            });
+            await gqDoc.save();
+            console.log(`✅ [MongoDB] GeneratedQuestion saved: ${gqDoc._id} | Paper: ${paperId}`);
+        } catch (dbErr) {
+            // Non-fatal: JSON file is the primary store; MongoDB is secondary
+            console.warn('⚠️ [MongoDB] GeneratedQuestion save failed (paper still in JSON):', dbErr.message);
+        }
 
         return res.json({ success: true, paperId, questions: allQuestions, count: allQuestions.length });
     } catch (e) {

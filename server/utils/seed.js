@@ -13,8 +13,6 @@ const Topic = require('../models/Topic');
 const Question = require('../models/Question');
 const StudentAttempt = require('../models/StudentAttempt');
 const StudentResult = require('../models/StudentResult');
-const ExamSchedule = require('../models/ExamSchedule');
-const Analytics = require('../models/Analytics');
 const GeneratedQuestion = require('../models/GeneratedQuestion');
 
 // 1. Initial User Accounts Data
@@ -409,8 +407,6 @@ async function seedDatabase() {
         await Question.deleteMany({});
         await StudentAttempt.deleteMany({});
         await StudentResult.deleteMany({});
-        await ExamSchedule.deleteMany({});
-        await Analytics.deleteMany({});
         await GeneratedQuestion.deleteMany({});
         console.log('🧹 Clearing completed.');
 

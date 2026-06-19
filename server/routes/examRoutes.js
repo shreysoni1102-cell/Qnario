@@ -105,8 +105,7 @@ router.get('/dashboard/student/:studentId', getStudentDashboard);
 router.post('/syllabus/upload', upload.single('syllabusFile'), uploadSyllabus);
 router.get('/syllabus/list', listSyllabi);
 router.route('/syllabus/:id')
-    .get(getSyllabusById)
-    .post(generateSyllabusPaper);
+    .get(getSyllabusById);
 router.post('/syllabus/:id/generate', generateSyllabusPaper);
 
 router.get('/syllabus-papers', listSyllabusPapers);
