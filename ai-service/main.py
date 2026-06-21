@@ -51,6 +51,7 @@ class GenerationRequest(BaseModel):
 class SyllabusRequest(BaseModel):
     text: str
     subject: Optional[str] = ""
+    pdfBase64: Optional[str] = None
 
 class InsightsRequest(BaseModel):
     studentName: Optional[str] = "Student"
@@ -187,7 +188,7 @@ async def extract_syllabus(payload: SyllabusRequest):
         if not text:
             raise HTTPException(status_code=400, detail="No syllabus content provided.")
         
-        result = ai_generator.extract_syllabus_topics(text, payload.subject)
+        result = ai_generator.extract_syllabus_topics(text, payload.subject, payload.pdfBase64)
         
         # Ensure parity with Express server which expects syllabus in 'extracted'
         if result.get('success') and 'syllabus' in result:
@@ -218,6 +219,37 @@ async def generate_insights(payload: InsightsRequest):
         raise HTTPException(status_code=500, detail=result.get('error', 'Insight generation failed.'))
     except Exception as e:
         logger.error(f"❌ [Insight Error]: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class CodingRequest(BaseModel):
+    language: Optional[str] = "Python"
+    topic: Optional[str] = "Arrays"
+    difficulty: Optional[str] = "Medium"
+    count: Optional[int] = Field(default=5, ge=1, le=20)
+    question_type: Optional[str] = "ConceptMCQ"   # CodeFill | Debugging | TraceOutput | ConceptMCQ
+
+
+@app.post("/api/coding-practice")
+async def coding_practice(payload: CodingRequest):
+    """Generate coding-specific questions: CodeFill, Debugging, TraceOutput, ConceptMCQ."""
+    try:
+        logger.info(f"🧑‍💻 [Coding] {payload.count}x {payload.question_type} | {payload.language} | {payload.topic} | {payload.difficulty}")
+        result = ai_generator.generate_coding_questions(
+            language=payload.language,
+            topic=payload.topic,
+            difficulty=payload.difficulty,
+            count=payload.count,
+            question_type=payload.question_type
+        )
+        if result.get("success"):
+            logger.info(f"✅ [Coding] Generated {result.get('count')} questions")
+            return result
+        raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"❌ [Coding Error]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

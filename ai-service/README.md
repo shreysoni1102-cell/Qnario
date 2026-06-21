@@ -8,7 +8,7 @@ The microservice runs as an independent async backend server. It handles all AI 
 
 ## ✨ Features
 
-- **Google Gemini API**: Utilizes `gemini-1.5-pro` (or similar models) as the primary generation engine.
+- **Google Gemini API**: Utilizes `gemini-flash-latest` as the primary generation engine, featuring multimodal capability to parse scanned PDFs directly via Base64 OCR.
 - **Groq Fallback Engine**: Transparently falls back to Groq (`llama-3.3-70b-versatile` / `llama3-70b-8192`) if the Gemini API key hits its free-tier rate limits or quota boundaries.
 - **Async Execution**: Leverages Python's async features and Uvicorn to ensure that heavy AI generation requests do not block Node.js Express server event loops or WebSocket channels.
 - **Cross-Platform Compatibility**: Automatically detects Windows runtimes and reconfigures standard I/O stdout streams to UTF-8 to prevent console logging emoji encoding crashes.
@@ -82,7 +82,7 @@ Verify the microservice and Gemini API status.
   "service": "FastAPI Gemini Question Generator Microservice",
   "version": "2.0",
   "gemini_status": "healthy",
-  "current_model": "gemini-1.5-pro"
+  "current_model": "gemini-flash-latest"
 }
 ```
 
@@ -127,7 +127,7 @@ Generates academic questions based on parameters.
 ```
 
 ### 3. Extract Syllabus
-Parses text files (scanned DOCX/PDF text) and structures them into organized units and topics.
+Parses text files (scanned DOCX/PDF text) and structures them into organized units and topics. For scanned/unreadable PDFs, handles direct multimodal base64 image parsing.
 
 * **URL**: `/api/extract-syllabus`
 * **Method**: `POST`
@@ -136,7 +136,8 @@ Parses text files (scanned DOCX/PDF text) and structures them into organized uni
 ```json
 {
   "text": "Raw syllabus string containing units, chapters, and topics...",
-  "subject": "Computer Science"
+  "subject": "Computer Science",
+  "pdfBase64": "Optional Base64 string of the uploaded syllabus PDF (used for OCR of scanned documents)"
 }
 ```
 
@@ -155,5 +156,44 @@ Analyzes attempt performance statistics per chapter and generates insights.
     "Organic Chemistry": { "correct": 2, "total": 5 },
     "Thermodynamics": { "correct": 4, "total": 4 }
   }
+}
+```
+
+### 5. Generate Coding Practice Questions
+Generates syntax-fill, debugging, output-tracing, or conceptual questions for specific programming languages and topics.
+
+* **URL**: `/api/coding-practice`
+* **Method**: `POST`
+* **Headers**: `Content-Type: application/json`
+* **Body Schema**:
+```json
+{
+  "language": "Python",
+  "topic": "Binary Search",
+  "difficulty": "Medium",
+  "count": 1,
+  "question_type": "CodeFill"
+}
+```
+* **Response**:
+```json
+{
+  "success": true,
+  "count": 1,
+  "questions": [
+    {
+      "questionNumber": 1,
+      "type": "CodeFill",
+      "language": "Python",
+      "topic": "Binary Search",
+      "difficulty": "Medium",
+      "instruction": "Fill in the blanks to complete the Python code:",
+      "code": "def binary_search(arr, target):\n    left, right = 0, ___BLANK___\n...",
+      "blanks": [
+        "len(arr) - 1"
+      ],
+      "explanation": "right starts at the last index of the array."
+    }
+  ]
 }
 ```

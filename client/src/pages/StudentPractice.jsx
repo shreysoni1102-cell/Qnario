@@ -362,7 +362,11 @@ const StudentPractice = () => {
 
                         {questions.map((q, idx) => {
                             const studentAns = answers[q._id] || 'Unanswered';
-                            const isCorrect = gradingResult?.detailed?.find(d => d.questionNo === idx + 1)?.isCorrect;
+                            const detailedEntry = gradingResult?.detailed?.find(d => d.questionNo === idx + 1);
+                            const isCorrect = detailedEntry?.isCorrect ?? false;
+                            // Correct answer letter from server grading result (most reliable source)
+                            const correctAnswerLetter = detailedEntry?.correctAnswer || q.answer?.correctOption || null;
+                            const explanationText = detailedEntry?.explanation || q.answer?.explanation || 'Refer to syllabus materials for detailed conceptual steps.';
                             
                             return (
                                 <div 
@@ -403,7 +407,7 @@ const StudentPractice = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '20px' }}>
                                         {q.options && q.options.map(opt => {
                                             const isSelected = opt.id === studentAns;
-                                            const isCorrectChoice = opt.id === q.answer?.correctOption;
+                                            const isCorrectChoice = opt.id === correctAnswerLetter;
                                             
                                             return (
                                                 <div 
@@ -411,13 +415,13 @@ const StudentPractice = () => {
                                                     style={{
                                                         padding: '10px 14px',
                                                         background: isCorrectChoice 
-                                                            ? 'rgba(16, 185, 129, 0.1)' 
-                                                            : isSelected 
+                                                            ? 'rgba(16, 185, 129, 0.15)' 
+                                                            : isSelected && !isCorrect
                                                                 ? 'rgba(239, 68, 68, 0.1)' 
                                                                 : 'rgba(0,0,0,0.1)',
                                                         border: isCorrectChoice 
-                                                            ? '1px solid #10b981' 
-                                                            : isSelected 
+                                                            ? '2px solid #10b981' 
+                                                            : isSelected && !isCorrect
                                                                 ? '1px solid #ef4444' 
                                                                 : '1px solid rgba(255,255,255,0.04)',
                                                         borderRadius: '6px',
@@ -425,6 +429,12 @@ const StudentPractice = () => {
                                                     }}
                                                 >
                                                     <span style={{ fontWeight: 'bold', marginRight: '4px' }}>{opt.id}.</span> {opt.text}
+                                                    {isCorrectChoice && (
+                                                        <span style={{ marginLeft: '8px', color: '#10b981', fontWeight: 'bold', fontSize: '0.75rem' }}>✓ Correct</span>
+                                                    )}
+                                                    {isSelected && !isCorrect && isCorrectChoice === false && (
+                                                        <span style={{ marginLeft: '8px', color: '#ef4444', fontWeight: 'bold', fontSize: '0.75rem' }}>✗ Your Answer</span>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -433,10 +443,10 @@ const StudentPractice = () => {
                                     {/* AI Explanatory note */}
                                     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', padding: '15px 20px', borderRadius: '8px' }}>
                                         <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#4facfe', marginBottom: '4px' }}>
-                                            AI Explanation (Correct Option: {q.answer?.correctOption || 'N/A'})
+                                            AI Explanation (Correct Answer: {correctAnswerLetter ? `Option ${correctAnswerLetter}` : 'N/A'})
                                         </p>
                                         <p style={{ fontSize: '0.85rem', opacity: 0.7, lineHeight: '1.4' }}>
-                                            {q.answer?.explanation || 'Refer to syllabus materials for detailed conceptual steps.'}
+                                            {explanationText}
                                         </p>
                                     </div>
                                 </div>

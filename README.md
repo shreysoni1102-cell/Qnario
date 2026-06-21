@@ -58,6 +58,7 @@
 ### 📄 Upload Syllabus → Get Question Paper (Core Feature)
 This is the heart of Qnario. Designed to **save teachers hours of work**:
 1. Teacher uploads their syllabus — **PDF, DOCX, JPG, or PNG**
+   - **Multimodal RAG OCR Scanner:** Features smart fallback detection for scanned/image PDFs (e.g. print-to-PDFs), converting files to Base64 data and passing it to Gemini's multimodal engine to perform deep OCR extraction (ensuring topics like "Big-O Notation" are captured).
 2. AI automatically reads it and **extracts every unit and topic**
 3. Teacher **selects only the topics** they want in the exam (per unit)
    - Each unit has a **"Select All" toggle**
@@ -68,8 +69,9 @@ This is the heart of Qnario. Designed to **save teachers hours of work**:
 6. **Download** the paper or **launch it as a live exam**
 
 ### 🤖 Dual AI Engine
-- **Google Gemini** (primary) for high-quality question generation
+- **Google Gemini** (primary) for high-quality question generation (`gemini-flash-latest` model)
 - **Groq LLaMA** (automatic fallback if Gemini quota exceeded)
+- **Robust Output Orchestration:** Maximizes generation capacity limits to 8,192 tokens to accommodate the extensive thinking/reasoning phase of modern Gemini models without JSON truncation.
 - Supports: **MCQ, Short Answer, Long Answer, True/False**
 - Configurable **difficulty**: Easy / Medium / Hard
 - Teacher never sees an error — fallback is completely transparent
@@ -84,10 +86,15 @@ This is the heart of Qnario. Designed to **save teachers hours of work**:
 - **Crash recovery**: Room state saved every 5 seconds — survives restarts
 - **Student Exam Recovery (Local Storage)**: Answer drafts are automatically saved to `localStorage` keyed by student email and room code. If the page is refreshed or browser crashes, their progress is instantly recovered upon rejoining the exam and synced back to the teacher's monitor.
 
-### 👤 Student Features
+### 👤 Student Features & Coding Playground
 - Join exam via 6-digit room code
-- AI-powered **practice test** by topic and difficulty
-- Dashboard with score history and study streaks
+- **AI Coding Practice Hub:** Interactive practice hub across 4 modes:
+  - **Code Fill:** Complete empty blanks (`___BLANK___`) inside real, educational code snippets.
+  - **Debug Challenges:** Identify code errors, view line-by-line buggy vs fixed code, and select the correct fix.
+  - **Trace Output:** Trace loop or memory updates and determine the correct console output.
+  - **Concept MCQs:** Test language-specific complexities, time/space complexities, and DSA concepts.
+- Supports **multiple languages** (Python, JavaScript, Java, C++, C) and DSA topics.
+- Dashboard with score history, dynamic analytics charts, and study streaks.
 
 ### 🛡️ Admin Panel
 - View all registered users (students & teachers)
@@ -177,6 +184,7 @@ Qnario/
 │   │   │   ├── Login.jsx      # 2-step OTP signup + login
 │   │   │   ├── StudentDashboard.jsx
 │   │   │   ├── StudentPractice.jsx
+│   │   │   ├── CodingPractice.jsx  # AI coding playground
 │   │   │   ├── ExamRoom.jsx   # Live proctored exam
 │   │   │   ├── TeacherDashboard.jsx
 │   │   │   ├── SyllabusUpload.jsx  # AI syllabus scanner
@@ -357,6 +365,9 @@ DEBUG=True
 | `GET` | `/results/:resultId` | Get specific score & AI feedback report |
 | `DELETE` | `/results/:id` | Delete student result |
 | `GET` | `/dashboard/student/:studentId` | Get student dashboard stats (streaks, trends) |
+| **Coding Practice Playground** | | |
+| `GET` | `/coding-practice` | Get coding practice tasks (CodeFill, Debug, Trace, ConceptMCQ) |
+| `POST` | `/coding-practice/submit` | Submit coding answers for evaluation & explanation |
 
 ---
 

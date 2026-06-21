@@ -904,7 +904,7 @@ const SyllabusUpload = () => {
                         }}>
                             <div style={{ display: 'flex', justifyContext: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
                                 <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.2rem', color: '#4facfe' }}>
-                                    Step 3.2: Select Chapters to Include ({selectedChapters.length} Selected)
+                                    Step 3.2: Cross-verify / Verify once again chapters and the topics to include ({selectedChapters.length} Selected)
                                 </h3>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button 

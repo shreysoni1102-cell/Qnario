@@ -420,21 +420,30 @@ const getPracticeTest = async (req, res) => {
                 const aiQuestions = Array.isArray(response.data?.questions) ? response.data.questions : [];
                 
                 if (aiQuestions.length > 0) {
-                    questions = aiQuestions.map((q, idx) => ({
-                        _id: new mongoose.Types.ObjectId(),
-                        text: q.question || q.text || 'Practice Question',
-                        options: q.options || [
-                            { id: 'A', text: 'Option A' },
-                            { id: 'B', text: 'Option B' },
-                            { id: 'C', text: 'Option C' },
-                            { id: 'D', text: 'Option D' }
-                        ],
-                        type: 'MCQ',
-                        marks: q.marks || 1,
-                        chapter: q.chapter || 'General',
-                        topic: q.topic || 'General',
-                        correctAnswer: q.answer?.correctOption || q.correctAnswer || 'A'
-                    }));
+                    questions = aiQuestions.map((q, idx) => {
+                        const correctOpt = q.answer?.correctOption || q.correctAnswer || 'A';
+                        return {
+                            _id: new mongoose.Types.ObjectId(),
+                            text: q.question || q.text || 'Practice Question',
+                            options: q.options || [
+                                { id: 'A', text: 'Option A' },
+                                { id: 'B', text: 'Option B' },
+                                { id: 'C', text: 'Option C' },
+                                { id: 'D', text: 'Option D' }
+                            ],
+                            type: 'MCQ',
+                            marks: q.marks || 1,
+                            chapter: q.chapter || 'General',
+                            topic: q.topic || 'General',
+                            difficulty: q.difficulty || difficulty || 'Medium',
+                            correctAnswer: correctOpt,
+                            // Store in answer object so frontend review UI can read it
+                            answer: {
+                                correctOption: correctOpt,
+                                explanation: q.answer?.explanation || ''
+                            }
+                        };
+                    });
                 }
             } catch (aiError) {
                 console.error('⚠️ [AI Practice Failure] Fallback generation errored out:', aiError.message);
@@ -446,15 +455,23 @@ const getPracticeTest = async (req, res) => {
 
         // 3. Compile a temporary syllabus paper draft so the grading engine evaluates it cleanly
         const paperId = 'spaper_prac_' + Date.now();
-        const mappedQuestions = questions.map((q, idx) => ({
-            questionNo: idx + 1,
-            _id: q._id,
-            text: q.text,
-            options: q.options,
-            type: q.type || 'MCQ',
-            marks: q.marks || 1,
-            correctAnswer: q.correctAnswer || q.answer?.correctOption || 'A'
-        }));
+        const mappedQuestions = questions.map((q, idx) => {
+            const correctOpt = q.correctAnswer || q.answer?.correctOption || 'A';
+            return {
+                questionNo: idx + 1,
+                _id: q._id,
+                text: q.text,
+                options: q.options,
+                type: q.type || 'MCQ',
+                marks: q.marks || 1,
+                chapter: q.chapter || 'General',
+                topic: q.topic || 'General',
+                difficulty: q.difficulty || difficulty || 'Medium',
+                correctAnswer: correctOpt,
+                // Also store in answer object so frontend review UI can display correct option
+                answer: q.answer || { correctOption: correctOpt, explanation: '' }
+            };
+        });
 
         const paperObj = {
             id: paperId,
@@ -656,8 +673,24 @@ const uploadSyllabus = async (req, res) => {
             }
         }
 
-        // If no file uploaded or text extraction yielded almost nothing, use Gemini to generate a syllabus automatically
-        if (!textContent || textContent.trim().length < 20) {
+        let pdfBase64 = null;
+        if (req.file && req.file.mimetype === 'application/pdf') {
+            const alphaOnlyText = textContent.replace(/[^a-zA-Z]/g, '').trim();
+            const isScanned = textContent && textContent.trim().length >= 20 && alphaOnlyText.length < 50;
+            if (!textContent || textContent.trim().length < 20 || isScanned) {
+                try {
+                    const fileBuffer = fs.readFileSync(filePath);
+                    pdfBase64 = fileBuffer.toString('base64');
+                    console.log(`📄 Scanned/Empty PDF detected, loaded ${fileBuffer.length} bytes for Base64 OCR...`);
+                } catch (err) {
+                    console.error('Failed to read PDF for base64:', err.message);
+                }
+            }
+        }
+
+        // If no file uploaded or text extraction yielded almost nothing, AND we don't have a pdfBase64, use Gemini to generate a syllabus automatically
+        const alphaOnlyText = textContent.replace(/[^a-zA-Z]/g, '').trim();
+        if ((!textContent || textContent.trim().length < 20 || alphaOnlyText.length < 50) && !pdfBase64) {
             console.log(`🤖 No readable syllabus file text, prompting AI to generate standard syllabus for ${subject} - ${className}`);
             textContent = `Generate a comprehensive academic syllabus for the subject: ${subject || 'General'} and class/grade: ${className || 'Standard'}. List all standard units, chapters, and topics.`;
             if (!req.file) {
@@ -666,10 +699,11 @@ const uploadSyllabus = async (req, res) => {
             }
         }
 
-        console.log(`📡 Calling FastAPI for topic extraction (${textContent.length} chars)...`);
+        console.log(`📡 Calling FastAPI for topic extraction (${textContent.length} chars, base64=${!!pdfBase64})...`);
         const aiResponse = await axios.post(`${AI_MICROSERVICE_URL}/api/extract-syllabus`, {
             text: textContent.slice(0, 15000),
-            subject: subject || ''
+            subject: subject || '',
+            pdfBase64: pdfBase64
         }, { timeout: 120000 });
 
         const extracted = aiResponse.data?.extracted || aiResponse.data?.syllabus || {};
@@ -1090,11 +1124,14 @@ const submitExamRoomAnswers = (req, res) => {
         const detailed = (answers || []).map(a => {
             const q = paper.questions.find(x => String(x.questionNo) === String(a.questionNo));
             let isCorrect = false;
+            let correctAnswer = '';
+            let explanation = '';
             if (q) {
                 totalMarks += q.marks || 1;
-                const correctLetter = (q.correctAnswer || '').toUpperCase().charAt(0);
+                correctAnswer = (q.correctAnswer || q.answer?.correctOption || '').toUpperCase().charAt(0);
+                explanation = q.answer?.explanation || '';
                 const studentLetter = (a.answer || '').toUpperCase().charAt(0);
-                isCorrect = correctLetter && correctLetter === studentLetter;
+                isCorrect = correctAnswer && correctAnswer === studentLetter;
 
                 if (isCorrect) totalScore += q.marks || 1;
 
@@ -1109,7 +1146,7 @@ const submitExamRoomAnswers = (req, res) => {
                     chapterStats[ch].scored += q.marks || 1;
                 }
             }
-            return { questionNo: a.questionNo, answer: a.answer, isCorrect };
+            return { questionNo: a.questionNo, answer: a.answer, isCorrect, correctAnswer, explanation };
         });
 
         const resultId = 'sres_' + Date.now();
@@ -1152,7 +1189,7 @@ const submitExamRoomAnswers = (req, res) => {
             });
         }
 
-        return res.json({ success: true, resultId, totalScore, totalMarks, percentage, chapterStats });
+        return res.json({ success: true, resultId, totalScore, totalMarks, percentage, chapterStats, detailed });
     } catch (e) {
         return res.status(500).json({ success: false, error: e.message });
     }
@@ -1175,11 +1212,14 @@ const submitPracticeAnswers = (req, res) => {
         const detailed = (answers || []).map(a => {
             const q = paper.questions.find(x => String(x.questionNo) === String(a.questionNo));
             let isCorrect = false;
+            let correctAnswer = '';
+            let explanation = '';
             if (q) {
                 totalMarks += q.marks || 1;
-                const correctLetter = (q.correctAnswer || '').toUpperCase().charAt(0);
+                correctAnswer = (q.correctAnswer || q.answer?.correctOption || 'A').toUpperCase().charAt(0);
+                explanation = q.answer?.explanation || '';
                 const studentLetter = (a.answer || '').toUpperCase().charAt(0);
-                isCorrect = correctLetter && correctLetter === studentLetter;
+                isCorrect = correctAnswer && correctAnswer === studentLetter;
 
                 if (isCorrect) totalScore += q.marks || 1;
 
@@ -1194,7 +1234,7 @@ const submitPracticeAnswers = (req, res) => {
                     chapterStats[ch].scored += q.marks || 1;
                 }
             }
-            return { questionNo: a.questionNo, answer: a.answer, isCorrect };
+            return { questionNo: a.questionNo, answer: a.answer, isCorrect, correctAnswer, explanation };
         });
 
         const resultId = 'sres_prac_' + Date.now();
@@ -1219,7 +1259,8 @@ const submitPracticeAnswers = (req, res) => {
         results.push(resultObj);
         writeLocalData(fallbackResults, results);
 
-        return res.json({ success: true, resultId, totalScore, totalMarks, percentage });
+        // Return detailed grading so frontend can render per-question correct/incorrect status
+        return res.json({ success: true, resultId, totalScore, totalMarks, percentage, detailed });
     } catch (e) {
         return res.status(500).json({ success: false, error: e.message });
     }
@@ -1365,6 +1406,143 @@ const getTeacherRoomsReport = (req, res) => {
     }
 };
 
+/**
+ * Proxy coding practice question generation to the Python AI microservice.
+ */
+const getCodingPractice = async (req, res) => {
+    try {
+        const { language = 'Python', topic = 'Arrays', difficulty = 'Medium', count = 5, question_type = 'ConceptMCQ' } = req.query;
+        const response = await axios.post(`${AI_MICROSERVICE_URL}/api/coding-practice`, {
+            language,
+            topic,
+            difficulty,
+            count: parseInt(count),
+            question_type
+        }, { timeout: 120000 });
+
+        const questions = response.data?.questions || [];
+        if (questions.length === 0) {
+            return res.status(500).json({ success: false, error: 'AI returned no questions.' });
+        }
+
+        // Build a temporary paper and store it for grading
+        const paperId = 'coding_' + Date.now();
+        const mappedQuestions = questions.map((q, idx) => ({
+            questionNo: idx + 1,
+            type: q.type || question_type,
+            language: q.language || language,
+            topic: q.topic || topic,
+            difficulty: q.difficulty || difficulty,
+            // CodeFill fields
+            instruction: q.instruction || '',
+            code: q.code || q.buggyCode || '',
+            blanks: q.blanks || [],
+            // Debug fields
+            buggyCode: q.buggyCode || '',
+            bugLine: q.bugLine || null,
+            bugDescription: q.bugDescription || '',
+            fixedCode: q.fixedCode || '',
+            fix: q.fix || '',
+            // MCQ / TraceOutput / Debugging option fields
+            text: q.text || q.instruction || '',
+            options: q.options || [],
+            correctOption: q.correctOption || '',
+            explanation: q.explanation || '',
+        }));
+
+        const paperObj = {
+            id: paperId,
+            paperType: 'Coding Practice',
+            language,
+            topic,
+            difficulty,
+            question_type,
+            questions: mappedQuestions,
+            createdAt: new Date()
+        };
+
+        const papers = readLocalData(fallbackPapersFile);
+        papers.push(paperObj);
+        writeLocalData(fallbackPapersFile, papers);
+
+        return res.json({ success: true, paperId, questions: mappedQuestions });
+    } catch (err) {
+        console.error('getCodingPractice error:', err.message);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+/**
+ * Grade a submitted coding practice session.
+ * Supports CodeFill (string match), Debugging, TraceOutput, ConceptMCQ (option match).
+ */
+const submitCodingAnswers = (req, res) => {
+    try {
+        const { paperId, studentEmail, studentName, answers } = req.body;
+        const papers = readLocalData(fallbackPapersFile);
+        const paper = papers.find(p => p.id === paperId);
+        if (!paper) return res.status(404).json({ success: false, error: 'Paper not found.' });
+
+        let totalScore = 0;
+        const totalMarks = paper.questions.length;
+        const chapterStats = {};
+
+        const detailed = (answers || []).map(a => {
+            const q = paper.questions.find(x => String(x.questionNo) === String(a.questionNo));
+            if (!q) return { questionNo: a.questionNo, isCorrect: false, correctAnswer: '', explanation: '' };
+
+            let isCorrect = false;
+            let correctAnswer = '';
+            let explanation = q.explanation || '';
+
+            if (q.type === 'CodeFill') {
+                // Grade each blank: normalize whitespace, case-insensitive
+                const studentBlanks = Array.isArray(a.blanks) ? a.blanks : [];
+                const correctBlanks = q.blanks || [];
+                const allCorrect = correctBlanks.every((correct, i) => {
+                    const student = (studentBlanks[i] || '').trim().replace(/\s+/g, ' ');
+                    const expected = correct.trim().replace(/\s+/g, ' ');
+                    return student.toLowerCase() === expected.toLowerCase();
+                });
+                isCorrect = allCorrect;
+                correctAnswer = correctBlanks.join(' | ');
+            } else {
+                // Debugging / TraceOutput / ConceptMCQ — compare option letter
+                correctAnswer = (q.correctOption || '').toUpperCase().charAt(0);
+                const studentLetter = (a.answer || '').toUpperCase().charAt(0);
+                isCorrect = correctAnswer && correctAnswer === studentLetter;
+            }
+
+            if (isCorrect) totalScore++;
+
+            const topic = q.topic || 'General';
+            if (!chapterStats[topic]) chapterStats[topic] = { correct: 0, total: 0, scored: 0, marks: 0 };
+            chapterStats[topic].total++;
+            chapterStats[topic].marks++;
+            if (isCorrect) { chapterStats[topic].correct++; chapterStats[topic].scored++; }
+
+            return { questionNo: a.questionNo, answer: a.answer, blanks: a.blanks, isCorrect, correctAnswer, explanation };
+        });
+
+        const percentage = totalMarks > 0 ? ((totalScore / totalMarks) * 100).toFixed(1) : '0.0';
+        const resultId = 'coding_res_' + Date.now();
+        const resultObj = {
+            id: resultId, roomCode: 'CODING_PRACTICE', paperId,
+            studentEmail, studentName, totalScore, totalMarks,
+            percentage, chapterStats, detailed, submittedAt: new Date()
+        };
+
+        const fallbackResults = path.join(__dirname, '..', 'results.json');
+        const results = readLocalData(fallbackResults);
+        results.push(resultObj);
+        writeLocalData(fallbackResults, results);
+
+        return res.json({ success: true, resultId, totalScore, totalMarks, percentage, detailed });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+    }
+};
+
 module.exports = {
     getExams,
     getExamById,
@@ -1396,5 +1574,7 @@ module.exports = {
     getTeacherRoomsReport,
     deleteExamRoomReport,
     deleteStudentResult,
+    getCodingPractice,
+    submitCodingAnswers,
     examRooms // Exporting object ref for WebSocket connection logic to utilize
 };

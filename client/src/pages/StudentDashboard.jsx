@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { 
     LogOut, BookOpen, Award, CheckCircle, ShieldAlert, Sparkles, 
-    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle, Trash2
+    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle, Trash2, Code2
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -286,6 +286,47 @@ const StudentDashboard = () => {
                             Configure AI Fix
                         </span>
                     </div>
+                </div>
+            </div>
+
+            {/* ── Coding Practice Banner ── */}
+            <div
+                onClick={() => navigate('/student/coding')}
+                style={{
+                    marginBottom: '35px',
+                    padding: '28px 32px',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, rgba(102,126,234,0.1), rgba(79,172,254,0.08))',
+                    border: '1px solid rgba(102,126,234,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(102,126,234,0.5)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(102,126,234,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+                <div style={{ position: 'absolute', right: '-40px', top: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(102,126,234,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Code2 size={28} color="white" />
+                    </div>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontFamily: 'Space Grotesk', fontSize: '1.2rem', fontWeight: '800' }}>Coding Practice</span>
+                            <span style={{ fontSize: '0.68rem', background: 'linear-gradient(135deg, #667eea, #4facfe)', color: 'white', padding: '2px 8px', borderRadius: '100px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>NEW</span>
+                        </div>
+                        <p style={{ opacity: 0.6, fontSize: '0.85rem', margin: 0 }}>
+                            Code Fill · Debug Challenges · Trace Output · DSA Concepts — Python, JS, Java, C++, C
+                        </p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#667eea', fontWeight: '700', flexShrink: 0 }}>
+                    Start Practice <ArrowRight size={18} />
                 </div>
             </div>
 

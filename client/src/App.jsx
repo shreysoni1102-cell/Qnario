@@ -11,6 +11,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentPractice from './pages/StudentPractice';
+import CodingPractice from './pages/CodingPractice';
 import ExamRoom from './pages/ExamRoom';
 import TeacherDashboard from './pages/TeacherDashboard';
 import SyllabusUpload from './pages/SyllabusUpload';
@@ -66,6 +67,14 @@ const AppContent = () => {
                     element={
                         <ProtectedRoute allowedRoles={['student']}>
                             <StudentPractice />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/student/coding" 
+                    element={
+                        <ProtectedRoute allowedRoles={['student']}>
+                            <CodingPractice />
                         </ProtectedRoute>
                     } 
                 />

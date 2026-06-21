@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class GeminiQuestionGenerator:
     def __init__(self):
-        self.primary_model = "gemini-1.5-flash-latest"
+        self.primary_model = "gemini-flash-latest"
         self.model = self.primary_model
         self.api_key = GEMINI_API_KEY
         self.groq_key = GROQ_API_KEY
@@ -51,15 +51,26 @@ class GeminiQuestionGenerator:
                 continue
         return {"success": False, "error": "All Groq models failed"}
 
-    def _chat(self, prompt: str, max_tokens: int = 2048, temperature: float = 0.7) -> Dict[str, Any]:
+    def _chat(self, prompt: Any, max_tokens: int = 2048, temperature: float = 0.7) -> Dict[str, Any]:
         # Try Gemini first, fallback to Groq if 404 or missing
+        def get_text_prompt(p):
+            if isinstance(p, list):
+                tp = ""
+                for part in p:
+                    if "text" in part:
+                        tp += part["text"] + "\n"
+                return tp
+            return p
+
         if not self.api_key:
-            return self._chat_groq(prompt, max_tokens)
+            return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
+        
+        parts = prompt if isinstance(prompt, list) else [{"text": prompt}]
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": parts}],
             "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}
         }
 
@@ -71,28 +82,28 @@ class GeminiQuestionGenerator:
                 return {"success": True, "content": content}
             elif response.status_code == 404 or response.status_code == 403:
                 logger.warning(f"Gemini {response.status_code} Error. Falling back to Groq...")
-                return self._chat_groq(prompt, max_tokens)
+                return self._chat_groq(get_text_prompt(prompt), max_tokens)
             elif response.status_code == 429:
                 time.sleep(2)
-                return self._chat_groq(prompt, max_tokens)
+                return self._chat_groq(get_text_prompt(prompt), max_tokens)
             else:
-                return self._chat_groq(prompt, max_tokens)
+                return self._chat_groq(get_text_prompt(prompt), max_tokens)
         except Exception as e:
             logger.error(f"Gemini Exception: {str(e)}. Falling back to Groq...")
-            return self._chat_groq(prompt, max_tokens)
+            return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
     _TOKENS_PER_QUESTION = {
-        'MCQ': 180,
-        'Multiple Choice Question (MCQ)': 180,
-        'Single Correct MCQ': 180,
-        'MSQ': 350,
-        'Multiple Select Question (MSQ)': 350,
-        'True/False': 120,
-        'Fill in the blanks': 150,
-        'One-word Answer': 180,
-        'Short Answer': 420,
-        'Long Answer': 650,
-        'Case Study': 800,
+        'MCQ': 400,
+        'Multiple Choice Question (MCQ)': 400,
+        'Single Correct MCQ': 400,
+        'MSQ': 600,
+        'Multiple Select Question (MSQ)': 600,
+        'True/False': 250,
+        'Fill in the blanks': 300,
+        'One-word Answer': 300,
+        'Short Answer': 650,
+        'Long Answer': 1200,
+        'Case Study': 1500,
     }
     _BATCH_SIZE_DEFAULT = 8
     _BATCH_SIZE_HEAVY = 4
@@ -104,11 +115,8 @@ class GeminiQuestionGenerator:
         if question_type in ('Long Answer', 'Case Study'):
             return self._BATCH_SIZE_HEAVY
         return self._BATCH_SIZE_DEFAULT
-
     def _tokens_for(self, question_type: str, count: int) -> int:
-        per_q = self._TOKENS_PER_QUESTION.get(question_type, 420)
-        needed = per_q * count + 600
-        return min(needed, self._MAX_TOKENS_CAP)
+        return self._MAX_TOKENS_CAP
 
     def generate_questions(self, subject, topic, difficulty, count=5, question_type="MCQ", level=None, stream=None, specific_topics=None, marks=1):
         norm_marks = self._normalize_marks(marks)
@@ -259,9 +267,83 @@ class GeminiQuestionGenerator:
                 }
             questions.append(q)
         return {"success": True, "questions": questions}
+    def extract_syllabus_topics(self, text_content, subject_hint, pdf_base64=None):
+        if pdf_base64:
+            prompt_text = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
 
-    def extract_syllabus_topics(self, text_content, subject_hint):
-        prompt = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
+CRITICAL RULES — You MUST follow these exactly:
+1. Use the EXACT unit names as written in the document. DO NOT rename, paraphrase, or reword them.
+   - If the syllabus says "UNIT-I AUTOMATA FUNDAMENTALS", the unitName MUST be "UNIT-I: AUTOMATA FUNDAMENTALS"
+   - If the syllabus says "UNIT-II REGULAR EXPRESSIONS AND LANGUAGES", the unitName MUST be "UNIT-II: REGULAR EXPRESSIONS AND LANGUAGES"
+   - NEVER substitute your own names like "Introduction to Theory of Computation" or "Finite Automata"
+2. Keep the unitNumber as the ordinal (1 for UNIT-I, 2 for UNIT-II, etc.)
+3. For chapters inside each unit: if the syllabus has sub-headings, use them exactly. If not, create 1-2 chapters named after the main topic groups in that unit's content.
+4. For topics: extract the exact technical terms listed in the unit content (e.g., "Deterministic Finite Automata", "Pushdown Automata", "Pumping Lemma").
+5. DO NOT merge units together. Each UNIT in the syllabus must be a separate entry.
+6. DO NOT create units that are not in the syllabus.
+
+Subject: {subject_hint or 'Auto-detect from document'}
+
+Return ONLY valid JSON in this exact format, nothing else:
+{{
+  "subject": "Exact subject name from the document",
+  "units": [
+    {{
+      "unitNumber": 1,
+      "unitName": "UNIT-I: EXACT NAME FROM DOCUMENT",
+      "chapters": [
+        {{
+          "chapterName": "Exact or inferred chapter name",
+          "topics": ["Exact Topic 1", "Exact Topic 2", "Exact Topic 3"]
+        }}
+      ]
+    }}
+  ]
+}}
+
+REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
+            
+            prompt = [
+                {
+                    "inlineData": {
+                        "mimeType": "application/pdf",
+                        "data": pdf_base64
+                    }
+                },
+                {
+                    "text": prompt_text
+                }
+            ]
+            logger.info(f"Extracting syllabus from base64 PDF ({len(pdf_base64)} chars)...")
+        elif text_content.strip().startswith("Generate a comprehensive"):
+            prompt = f"""You are an expert academic curriculum designer. Your job is to generate a comprehensive, structured syllabus for the requested subject and class/grade.
+            
+Subject: {subject_hint or 'General'}
+Requirement: {text_content}
+
+CRITICAL RULES:
+1. Generate exactly 5 units representing a standard course curriculum for this subject.
+2. Structure the output into Units, Chapters, and specific Topics.
+3. Return ONLY valid JSON in this exact format, nothing else:
+{{
+  "subject": "{subject_hint or 'Subject'}",
+  "units": [
+    {{
+      "unitNumber": 1,
+      "unitName": "UNIT-I: [Name of Unit 1]",
+      "chapters": [
+        {{
+          "chapterName": "[Name of Chapter 1]",
+          "topics": ["[Topic 1]", "[Topic 2]", "[Topic 3]"]
+        }}
+      ]
+    }}
+  ]
+}}
+"""
+            logger.info("Generating syllabus from AI prompts...")
+        else:
+            prompt = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
 
 CRITICAL RULES — You MUST follow these exactly:
 1. Use the EXACT unit names as written in the document. DO NOT rename, paraphrase, or reword them.
@@ -297,10 +379,9 @@ Syllabus document text:
 {text_content[:15000]}
 
 REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
-        
-        logger.info(f"Extracting syllabus from {len(text_content)} chars...")
+            logger.info(f"Extracting syllabus from {len(text_content)} chars...")
+
         result = self._chat(prompt, max_tokens=4000, temperature=0.1)
-        
         if result["success"]:
             logger.info("Gemini call successful, parsing response...")
             parsed = self._parse_json_object(result["content"])
@@ -527,6 +608,190 @@ Generate all {count} questions now."""
             if 'value' not in answer and 'correctAnswer' in answer:
                 answer['value'] = answer['correctAnswer']
         return answer
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # CODING PRACTICE METHODS
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def generate_coding_questions(self, language: str, topic: str, difficulty: str,
+                                  count: int, question_type: str) -> Dict[str, Any]:
+        """Generate coding-specific questions: CodeFill, Debugging, DSA, TraceOutput, ConceptMCQ."""
+        try:
+            if question_type == 'CodeFill':
+                prompt = self._build_code_fill_prompt(language, topic, difficulty, count)
+            elif question_type == 'Debugging':
+                prompt = self._build_debug_prompt(language, topic, difficulty, count)
+            elif question_type == 'TraceOutput':
+                prompt = self._build_trace_output_prompt(language, topic, difficulty, count)
+            else:
+                # DSA / ConceptMCQ — reuse existing MCQ prompt tuned for coding
+                prompt = self._build_coding_mcq_prompt(language, topic, difficulty, count)
+
+            result = self._chat(prompt, max_tokens=4096, temperature=0.7)
+            if not result['success']:
+                return {'success': False, 'error': result.get('error', 'AI call failed')}
+
+            parsed = self._parse_json_array(result['content'])
+            if not parsed:
+                # Try object wrapper fallback
+                obj = self._parse_json_object(result['content'])
+                parsed = obj.get('questions', [])
+
+            if not parsed:
+                return {'success': False, 'error': 'Failed to parse AI response as JSON'}
+
+            return {'success': True, 'questions': parsed[:count], 'count': len(parsed[:count])}
+        except Exception as e:
+            logger.error(f'Coding question generation error: {e}')
+            return {'success': False, 'error': str(e)}
+
+    def _build_code_fill_prompt(self, language: str, topic: str, difficulty: str, count: int) -> str:
+        return f"""Generate exactly {count} "Code Fill-in-the-Blank" questions for {language} on topic: {topic}.
+Difficulty: {difficulty}
+
+Rules:
+- Show a real, meaningful code snippet related to {topic} in {language}
+- Replace key parts with ___BLANK___ placeholders (1-3 blanks per question)
+- Each blank must be a single expression, keyword, value, or short statement
+- Make blanks test understanding, not trivial copying
+
+Return ONLY a valid JSON array. Each object MUST have this EXACT structure:
+[
+  {{
+    "questionNumber": 1,
+    "type": "CodeFill",
+    "language": "{language}",
+    "topic": "{topic}",
+    "difficulty": "{difficulty}",
+    "instruction": "Fill in the blanks to complete the {language} code:",
+    "code": "def binary_search(arr, target):\\n    left, right = 0, ___BLANK___\\n    while left <= right:\\n        mid = (left + right) // ___BLANK___\\n        if arr[mid] == target:\\n            return mid\\n        elif arr[mid] < target:\\n            left = mid + 1\\n        else:\\n            right = mid - 1\\n    return -1",
+    "blanks": ["len(arr) - 1", "2"],
+    "explanation": "right starts at last index; mid divides the search space in half"
+  }}
+]
+
+IMPORTANT:
+- Use ___BLANK___ (with triple underscores) as the placeholder
+- blanks array must match the exact number of ___BLANK___ occurrences in code, in order
+- Generate real, educational code — no toy examples
+- Return ONLY the JSON array, no extra text"""
+
+    def _build_debug_prompt(self, language: str, topic: str, difficulty: str, count: int) -> str:
+        bug_types = {
+            'Easy': ['wrong initialization', 'off-by-one error', 'wrong comparison operator'],
+            'Medium': ['missing base case in recursion', 'wrong loop condition', 'logic error in condition'],
+            'Hard': ['subtle logic bug', 'incorrect edge case handling', 'wrong algorithm step']
+        }
+        chosen_bugs = bug_types.get(difficulty, bug_types['Medium'])
+
+        return f"""Generate exactly {count} "Debugging Challenge" questions for {language} on topic: {topic}.
+Difficulty: {difficulty}
+Bug types to include: {', '.join(chosen_bugs)}
+
+Rules:
+- Write a realistic code snippet with exactly ONE intentional bug
+- The bug should be educational and related to common mistakes
+- Provide the corrected version and a clear explanation of the bug
+
+Return ONLY a valid JSON array. Each object MUST have this EXACT structure:
+[
+  {{
+    "questionNumber": 1,
+    "type": "Debugging",
+    "language": "{language}",
+    "topic": "{topic}",
+    "difficulty": "{difficulty}",
+    "instruction": "Find and fix the bug in this {language} code:",
+    "buggyCode": "def find_max(arr):\\n    max_val = 0  # Bug here\\n    for num in arr:\\n        if num > max_val:\\n            max_val = num\\n    return max_val\\n\\nprint(find_max([-5, -3, -1]))  # Should print -1",
+    "bugLine": 2,
+    "bugDescription": "Initializing max_val to 0 fails for all-negative arrays",
+    "fixedCode": "def find_max(arr):\\n    max_val = arr[0]  # Fixed: use first element\\n    for num in arr:\\n        if num > max_val:\\n            max_val = num\\n    return max_val",
+    "fix": "max_val = arr[0]",
+    "options": [
+      {{"id": "A", "text": "Change `max_val = 0` to `max_val = arr[0]`"}},
+      {{"id": "B", "text": "Change `if num > max_val` to `if num >= max_val`"}},
+      {{"id": "C", "text": "Change `return max_val` to `return max_val - 1`"}},
+      {{"id": "D", "text": "Add `arr.sort()` before the loop"}}
+    ],
+    "correctOption": "A",
+    "explanation": "When all values are negative, starting max_val at 0 means no element ever exceeds it. Using arr[0] as the initial value handles all cases correctly."
+  }}
+]
+
+IMPORTANT:
+- bugLine is 1-indexed line number of the bug
+- options must have exactly 4 choices (A, B, C, D)
+- correctOption must be the letter of the correct fix
+- Return ONLY the JSON array, no extra text"""
+
+    def _build_trace_output_prompt(self, language: str, topic: str, difficulty: str, count: int) -> str:
+        return f"""Generate exactly {count} "Trace the Output" questions for {language} on topic: {topic}.
+Difficulty: {difficulty}
+
+Rules:
+- Write a short, complete code snippet (5-15 lines) that produces deterministic output
+- The output should NOT be trivially obvious — it should test understanding
+- Include tricky but fair aspects like loop behavior, variable scoping, or data structure ops
+
+Return ONLY a valid JSON array. Each object MUST have this EXACT structure:
+[
+  {{
+    "questionNumber": 1,
+    "type": "TraceOutput",
+    "language": "{language}",
+    "topic": "{topic}",
+    "difficulty": "{difficulty}",
+    "instruction": "What is the output of this {language} code?",
+    "code": "stack = []\\nfor i in range(1, 5):\\n    stack.append(i)\\nwhile stack:\\n    print(stack.pop(), end=' ')",
+    "options": [
+      {{"id": "A", "text": "1 2 3 4"}},
+      {{"id": "B", "text": "4 3 2 1"}},
+      {{"id": "C", "text": "1 2 3"}},
+      {{"id": "D", "text": "Error"}}
+    ],
+    "correctOption": "B",
+    "explanation": "Stack is LIFO. After pushing 1,2,3,4, popping yields 4,3,2,1."
+  }}
+]
+
+IMPORTANT:
+- Code must be syntactically correct and produce exactly one deterministic output
+- Wrong options should be plausible (common misconceptions)
+- Return ONLY the JSON array, no extra text"""
+
+    def _build_coding_mcq_prompt(self, language: str, topic: str, difficulty: str, count: int) -> str:
+        return f"""Generate exactly {count} coding concept MCQ questions for {language} on topic: {topic}.
+Difficulty: {difficulty}
+
+These questions test deep understanding of {language} and {topic} concepts.
+Include questions about time/space complexity, algorithm behavior, language features, and best practices.
+
+Return ONLY a valid JSON array. Each object MUST have this EXACT structure:
+[
+  {{
+    "questionNumber": 1,
+    "type": "ConceptMCQ",
+    "language": "{language}",
+    "topic": "{topic}",
+    "difficulty": "{difficulty}",
+    "instruction": "",
+    "code": "",
+    "text": "What is the time complexity of inserting an element at the beginning of a Python list?",
+    "options": [
+      {{"id": "A", "text": "O(1)"}},
+      {{"id": "B", "text": "O(n)"}},
+      {{"id": "C", "text": "O(log n)"}},
+      {{"id": "D", "text": "O(n²)"}}
+    ],
+    "correctOption": "B",
+    "explanation": "Python lists are dynamic arrays. Inserting at index 0 requires shifting all n existing elements right."
+  }}
+]
+
+IMPORTANT:
+- code field can be empty string if no code is needed
+- Make questions genuinely educational, not trivial
+- Return ONLY the JSON array, no extra text"""
 
     def _normalize_questions(self, questions, question_type, difficulty, marks, count):
         normalized = []

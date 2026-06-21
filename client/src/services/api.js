@@ -69,4 +69,9 @@ export const examRoomAPI = {
     deleteRoomReport: (code) => API.delete(`/api/exam-room/${code}`)
 };
 
+export const codingAPI = {
+    getCodingPractice: (params) => API.get('/api/coding-practice', { params }),
+    submitCodingAnswers: (payload) => API.post('/api/coding-practice/submit', payload),
+};
+
 export default API;

@@ -33,7 +33,9 @@ const {
     getTeacherRoomsReport,
     deleteSyllabusPaper,
     deleteExamRoomReport,
-    deleteStudentResult
+    deleteStudentResult,
+    getCodingPractice,
+    submitCodingAnswers
 } = require('../controllers/examController');
 
 const { authenticate, authorize } = require('../middleware/authMiddleware');
@@ -125,5 +127,8 @@ router.post('/exam-room/:code/submit', submitExamRoomAnswers);
 router.post('/practice/submit', submitPracticeAnswers);
 router.delete('/results/:id', authenticate, authorize('teacher', 'admin'), deleteStudentResult);
 
+// ==================== CODING PRACTICE ====================
+router.get('/coding-practice', getCodingPractice);
+router.post('/coding-practice/submit', submitCodingAnswers);
 
 module.exports = router;
