@@ -201,6 +201,60 @@ Generates syntax-fill, debugging, output-tracing, or conceptual questions for sp
 }
 ```
 
+### 6. Index Document (RAG)
+Chunks and embeds document text, storing the embeddings in a Chroma vector collection. If embedding generation fails, any partially indexed collections are cleaned up.
+
+* **URL**: `/api/index-document`
+* **Method**: `POST`
+* **Headers**: `Content-Type: application/json`
+* **Body Schema**:
+```json
+{
+  "syllabus_id": "math_101",
+  "text": "Full document content containing chapters and topics..."
+}
+```
+* **Success Response (200)**:
+```json
+{
+  "success": true,
+  "chunks_count": 12
+}
+```
+* **Error Response (502 Bad Gateway)**:
+Returned when the Gemini Embedding API call fails or key is missing/dummy.
+```json
+{
+  "detail": "No valid Gemini API key provided (missing or dummy key)."
+}
+```
+
+### 7. RAG Question Generation
+Retrieves context chunks matching the topic, and generates questions using RAG (streaming).
+
+* **URL**: `/api/generate-questions-rag`
+* **Method**: `POST`
+* **Headers**: `Content-Type: application/json`
+* **Body Schema**:
+```json
+{
+  "syllabus_id": "math_101",
+  "topic": "Calculus",
+  "difficulty": "Medium",
+  "count": 5,
+  "question_type": "MCQ"
+}
+```
+* **Response**:
+Streams Server-Sent Events (SSE) using `text/event-stream`.
+* **Error Response (502 Bad Gateway)**:
+Returned when retrieval embedding API call fails.
+```json
+{
+  "detail": "Embedding API call failed. Primary (gemini-embedding-2) error: [Status 500: Internal Server Error] ..."
+}
+```
+
 ---
 
 ## 🧪 Evals

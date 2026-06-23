@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List
 import json
 
 from services.gemini_service import GeminiQuestionGenerator
-from services.retrieval_service import RetrievalService
+from services.retrieval_service import RetrievalService, EmbeddingGenerationError
 from config import PYTHON_PORT, DEBUG
 
 # Configure Logger
@@ -253,7 +253,12 @@ async def index_document(payload: IndexDocumentRequest):
         if result.get("success"):
             return result
         else:
+            if "failed_at_chunk" in result:
+                raise HTTPException(status_code=502, detail=result.get("error", "Embedding generation failed"))
             raise HTTPException(status_code=500, detail=result.get("error", "Indexing failed"))
+    except EmbeddingGenerationError as e:
+        logger.error(f"❌ [RAG Index Embedding Error]: {str(e)}")
+        raise HTTPException(status_code=502, detail=str(e))
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -297,9 +302,11 @@ async def generate_questions_rag(payload: RAGGenerationRequest):
             ),
             media_type="text/event-stream"
         )
-    except Exception as e:
-        logger.error(f"❌ [RAG Gen Error]: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except EmbeddingGenerationError as e:
+        logger.error(f"❌ [RAG Gen Embedding Error]: {str(e)}")
+        raise HTTPException(status_code=502, detail=str(e))
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"❌ [RAG Gen Error]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

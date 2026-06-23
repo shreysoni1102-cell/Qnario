@@ -16,6 +16,10 @@ except ImportError:
     CHROMA_AVAILABLE = False
     logger.warning("chromadb package is not installed. Chroma functionality will be disabled or mocked.")
 
+class EmbeddingGenerationError(Exception):
+    """Custom exception raised when embedding generation fails."""
+    pass
+
 class RetrievalService:
     def __init__(self, persist_directory: str = "chroma_db"):
         self.persist_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", persist_directory))
@@ -90,38 +94,45 @@ class RetrievalService:
         return chunks
 
     def get_embedding(self, text: str, api_key: str) -> List[float]:
-        """Gets embedding representation from Gemini Embeddings API with mock fallbacks for testing."""
+        """Gets embedding representation from Gemini Embeddings API."""
         if not api_key or "dummy" in api_key.lower():
-            # Mock fallback vector (768 dimensions for text-embedding-004)
-            return [random.random() for _ in range(768)]
+            raise EmbeddingGenerationError("No valid Gemini API key provided (missing or dummy key).")
 
         headers = {"Content-Type": "application/json"}
-        # gemini-embedding-2 is the primary embedding model
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key={api_key}"
         payload = {
             "model": "models/gemini-embedding-2",
             "content": {
                 "parts": [{"text": text}]
             }
         }
-
+        
+        primary_err = None
+        # Try primary model: gemini-embedding-2
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key={api_key}"
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=15)
             if resp.status_code == 200:
                 return resp.json()["embedding"]["values"]
-            else:
-                # Try fallback models/gemini-embedding-001
-                url_fallback = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={api_key}"
-                payload["model"] = "models/gemini-embedding-001"
-                resp_fallback = requests.post(url_fallback, headers=headers, json=payload, timeout=15)
-                if resp_fallback.status_code == 200:
-                    return resp_fallback.json()["embedding"]["values"]
-                logger.error(f"Embedding generation failed: {resp_fallback.status_code} - {resp_fallback.text}")
+            primary_err = f"Status {resp.status_code}: {resp.text}"
         except Exception as e:
-            logger.error(f"Embedding request exception: {e}")
+            primary_err = f"Exception: {str(e)}"
 
-        # Return a deterministic fallback vector rather than raising an error to maintain robust operations
-        return [0.1] * 768
+        # Try fallback model: gemini-embedding-001
+        fallback_err = None
+        url_fallback = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={api_key}"
+        payload["model"] = "models/gemini-embedding-001"
+        try:
+            resp_fallback = requests.post(url_fallback, headers=headers, json=payload, timeout=15)
+            if resp_fallback.status_code == 200:
+                return resp_fallback.json()["embedding"]["values"]
+            fallback_err = f"Status {resp_fallback.status_code}: {resp_fallback.text}"
+        except Exception as e:
+            fallback_err = f"Exception: {str(e)}"
+
+        raise EmbeddingGenerationError(
+            f"Embedding API call failed. Primary (gemini-embedding-2) error: [{primary_err}], "
+            f"Fallback (gemini-embedding-001) error: [{fallback_err}]."
+        )
 
     def index_document(self, syllabus_id: str, text: str, api_key: str) -> Dict[str, Any]:
         """Chunks, embeds, and stores the document in a collection named after the syllabus_id."""
@@ -151,7 +162,15 @@ class RetrievalService:
             embeddings = []
             ids = []
             for idx, chunk in enumerate(chunks):
-                emb = self.get_embedding(chunk, api_key)
+                try:
+                    emb = self.get_embedding(chunk, api_key)
+                except EmbeddingGenerationError as e:
+                    logger.error(f"Embedding generation failed at chunk {idx}: {e}")
+                    try:
+                        self.client.delete_collection(name=coll_name)
+                    except Exception:
+                        pass
+                    return {"success": False, "error": str(e), "failed_at_chunk": idx}
                 embeddings.append(emb)
                 ids.append(f"chunk_{idx}")
 
@@ -180,7 +199,12 @@ class RetrievalService:
                 coll_name = coll_name[:63]
 
             collection = self.client.get_collection(name=coll_name)
-            query_emb = self.get_embedding(query, api_key)
+            
+            try:
+                query_emb = self.get_embedding(query, api_key)
+            except EmbeddingGenerationError as e:
+                logger.error(f"Embedding generation failed for query: {e}")
+                raise e
 
             results = collection.query(
                 query_embeddings=[query_emb],
@@ -190,6 +214,8 @@ class RetrievalService:
             if results and "documents" in results and results["documents"]:
                 return results["documents"][0]
         except Exception as e:
+            if isinstance(e, EmbeddingGenerationError):
+                raise e
             logger.error(f"Failed to retrieve chunks for syllabus {syllabus_id}: {e}")
 
         return []
