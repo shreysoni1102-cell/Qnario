@@ -16,13 +16,15 @@
 
 *Making a question paper used to take hours. With Qnario, a teacher uploads their syllabus, selects the topics they want — and the AI generates a complete, ready-to-use question paper in seconds.*
 
+**This project demonstrates dual-mode AI document processing — full-context prompting for short documents (<8000 tokens), true retrieval-augmented generation (chunking + embeddings + vector search via Chroma) for larger ones — plus an automated eval harness for catching prompt regressions.**
+
 </div>
 
 ---
 
 > **The Problem:** Teachers spend enormous time creating question papers from scratch — especially when they want to cover only specific topics or skip chapters not yet taught.
 >
-> **The Solution:** Upload your syllabus PDF → AI reads and extracts every unit and topic → You select exactly what you want → AI builds the full question paper instantly. Download it, or launch it as a live proctored exam.
+> **The Solution:** Upload your syllabus PDF or textbook → AI processes the document (using full-context scanner for short syllabi, or RAG vector indexing via Chroma for large books) → You select exactly what you want → AI builds the progressive question paper stream instantly. Download it, or launch it as a live proctored exam.
 
 ## 📸 Screenshots
 

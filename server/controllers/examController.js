@@ -699,9 +699,25 @@ const uploadSyllabus = async (req, res) => {
             }
         }
 
-        console.log(`📡 Calling FastAPI for topic extraction (${textContent.length} chars, base64=${!!pdfBase64})...`);
+
+        const id = 'syl_' + Date.now();
+        const useRAG = true; // Always index every document via RAG — consistent for all PDF sizes
+
+        console.log(`📚 Indexing document via FastAPI /api/index-document (RAG always enabled)...`);
+        try {
+            const indexResponse = await axios.post(`${AI_MICROSERVICE_URL}/api/index-document`, {
+                syllabus_id: id,
+                text: textContent
+            }, { timeout: 120000 });
+            console.log(`✅ Chroma index result:`, indexResponse.data);
+        } catch (err) {
+            console.error(`⚠️ Failed to index document for RAG (non-fatal, extraction continues):`, err.message);
+        }
+
+
+        console.log(`... Calling FastAPI for topic extraction (${textContent.length} chars, base64=${!!pdfBase64})...`);
         const aiResponse = await axios.post(`${AI_MICROSERVICE_URL}/api/extract-syllabus`, {
-            text: textContent.slice(0, 15000),
+            text: textContent,
             subject: subject || '',
             pdfBase64: pdfBase64
         }, { timeout: 120000 });
@@ -711,7 +727,6 @@ const uploadSyllabus = async (req, res) => {
 
         // Save locally to store
         const syllabi = readLocalData(fallbackSyllabusFile);
-        const id = 'syl_' + Date.now();
         const record = {
             id,
             teacherEmail,
@@ -720,13 +735,14 @@ const uploadSyllabus = async (req, res) => {
             fileName,
             filePath,
             extractedTopics: extracted.units || [],
+            useRAG: useRAG,
             createdAt: new Date()
         };
 
         syllabi.push(record);
         writeLocalData(fallbackSyllabusFile, syllabi);
 
-        return res.json({ success: true, syllabusId: id, extracted });
+        return res.json({ success: true, syllabusId: id, extracted, useRAG: record.useRAG });
     } catch (error) {
         console.error('Syllabus upload controller failure:', error.message);
         return res.status(500).json({ success: false, error: error.message });
@@ -786,6 +802,11 @@ const generateSyllabusPaper = async (req, res) => {
             language, duration, selectedChapters, bloomsLevel
         } = req.body;
 
+        // Set up Server-Sent Events headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
         const allUnits = syllabus.extractedTopics || [];
         const unitTopicLines = allUnits.map(u => ({
             unitName: u.unitName || u.unit || 'Unit',
@@ -837,10 +858,11 @@ const generateSyllabusPaper = async (req, res) => {
             const marksEach = parseInt(section.marksEach || 1, 10) || 1;
             const sectionTopics = buildDistributedTopics(countVal);
 
-            console.log(`[Generate] Section "${section.name}": calling microservice for ${countVal} ${qType}...`);
+            console.log(`[Generate] Section "${section.name}": calling microservice for ${countVal} ${qType} (Stream)...`);
 
             try {
-                const response = await axios.post(`${AI_MICROSERVICE_URL}/api/generate-questions`, {
+                const endpoint = syllabus.useRAG ? '/api/generate-questions-rag' : '/api/generate-questions';
+                const payload = {
                     subject: syllabus.subject || 'General',
                     topic: sectionTopics,
                     difficulty: difficulty || 'Medium',
@@ -848,24 +870,88 @@ const generateSyllabusPaper = async (req, res) => {
                     question_type: qType,
                     marks: marksEach,
                     level: bloomsLevel || 'Mixed'
-                }, { timeout: 90000 });
+                };
+                if (syllabus.useRAG) {
+                    payload.syllabus_id = syllabus.id;
+                }
 
-                const questionsReturned = Array.isArray(response.data?.questions) ? response.data.questions : [];
-                questionsReturned.slice(0, countVal).forEach(q => {
-                    allQuestions.push({
-                        ...q,
-                        questionNo: globalQNo++,
-                        section: section.name,
-                        type: qType,
-                        marks: marksEach,
-                        correctAnswer: q.answer?.correctOption || q.correctAnswer || ''
+                // Call FastAPI microservice with responseType stream
+                const response = await axios.post(`${AI_MICROSERVICE_URL}${endpoint}`, payload, {
+                    responseType: 'stream',
+                    timeout: 120000
+                });
+
+                await new Promise((resolve, reject) => {
+                    let buffer = '';
+                    response.data.on('data', chunk => {
+                        buffer += chunk.toString();
+                        let lines = buffer.split('\n\n');
+                        buffer = lines.pop(); // save incomplete line
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const jsonStr = line.slice(6).trim();
+                                    if (!jsonStr) continue;
+                                    const q = JSON.parse(jsonStr);
+                                    if (q.error) {
+                                        console.error("Microservice stream error segment:", q.error);
+                                        continue;
+                                    }
+
+                                    const mappedQ = {
+                                        ...q,
+                                        questionNo: globalQNo++,
+                                        section: section.name,
+                                        type: qType,
+                                        marks: marksEach,
+                                        correctAnswer: q.answer?.correctOption || q.correctAnswer || ''
+                                    };
+                                    allQuestions.push(mappedQ);
+
+                                    // Write question event to client
+                                    res.write(`data: ${JSON.stringify(mappedQ)}\n\n`);
+                                } catch (parseErr) {
+                                    console.error("SSE parse error:", parseErr.message, "Line was:", line);
+                                }
+                            }
+                        }
+                    });
+
+                    response.data.on('end', () => {
+                        if (buffer && buffer.startsWith('data: ')) {
+                            try {
+                                const jsonStr = buffer.slice(6).trim();
+                                if (jsonStr) {
+                                    const q = JSON.parse(jsonStr);
+                                    if (!q.error) {
+                                        const mappedQ = {
+                                            ...q,
+                                            questionNo: globalQNo++,
+                                            section: section.name,
+                                            type: qType,
+                                            marks: marksEach,
+                                            correctAnswer: q.answer?.correctOption || q.correctAnswer || ''
+                                        };
+                                        allQuestions.push(mappedQ);
+                                        res.write(`data: ${JSON.stringify(mappedQ)}\n\n`);
+                                    }
+                                }
+                            } catch (parseErr) {}
+                        }
+                        resolve();
+                    });
+
+                    response.data.on('error', err => {
+                        reject(err);
                     });
                 });
+
             } catch (err) {
                 console.error(`AI question generation failed for section ${section.name}:`, err.message);
-                // Fallback placeholder questions
+                // Stream fallbacks
                 for (let i = 0; i < countVal; i++) {
-                    allQuestions.push({
+                    const fallbackQ = {
                         questionNo: globalQNo++,
                         section: section.name,
                         type: qType,
@@ -878,7 +964,9 @@ const generateSyllabusPaper = async (req, res) => {
                             { id: 'D', text: 'Option D' }
                         ] : [],
                         correctAnswer: 'A'
-                    });
+                    };
+                    allQuestions.push(fallbackQ);
+                    res.write(`data: ${JSON.stringify(fallbackQ)}\n\n`);
                 }
             }
         }
@@ -943,10 +1031,17 @@ const generateSyllabusPaper = async (req, res) => {
             console.warn('⚠️ [MongoDB] GeneratedQuestion save failed (paper still in JSON):', dbErr.message);
         }
 
-        return res.json({ success: true, paperId, questions: allQuestions, count: allQuestions.length });
+        // Send a final termination event containing paper ID
+        res.write(`data: ${JSON.stringify({ done: true, paperId, count: allQuestions.length })}\n\n`);
+        res.end();
     } catch (e) {
         console.error('Syllabus generator controller error:', e);
-        return res.status(500).json({ success: false, error: e.message });
+        // Only return status 500 JSON if we haven't sent headers yet
+        if (!res.headersSent) {
+            return res.status(500).json({ success: false, error: e.message });
+        } else {
+            res.end();
+        }
     }
 };
 

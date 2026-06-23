@@ -53,6 +53,66 @@ export const syllabusAPI = {
     listSyllabi: (teacherEmail) => API.get('/api/syllabus/list', { params: { teacherEmail } }),
     getSyllabusById: (id) => API.get(`/api/syllabus/${id}`),
     generatePaper: (id, payload) => API.post(`/api/syllabus/${id}/generate`, payload),
+    generatePaperStream: (id, payload, onQuestion, onDone, onError) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const url = `${import.meta.env.VITE_API_URL || ''}/api/syllabus/${id}/generate`;
+        
+        fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            function read() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        return;
+                    }
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.slice(6).trim();
+                                if (!jsonStr) continue;
+                                const data = JSON.parse(jsonStr);
+                                if (data.done) {
+                                    onDone(data);
+                                } else {
+                                    onQuestion(data);
+                                }
+                            } catch (err) {
+                                console.error("Error parsing frontend SSE chunk:", err);
+                            }
+                        }
+                    }
+                    read();
+                }).catch(err => {
+                    onError(err);
+                });
+            }
+            read();
+        })
+        .catch(err => {
+            onError(err);
+        });
+    },
     listPapers: (teacherEmail) => API.get('/api/syllabus-papers', { params: { teacherEmail } }),
     getPaperById: (id) => API.get(`/api/syllabus-papers/${id}`),
     updateQuestion: (paperId, qNo, payload) => API.patch(`/api/syllabus-papers/${paperId}/question/${qNo}`, payload),

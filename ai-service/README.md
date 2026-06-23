@@ -4,6 +4,9 @@ This folder contains the **AI Microservice** for Qnario, built using **FastAPI**
 
 The microservice runs as an independent async backend server. It handles all AI operations: parsing raw academic syllabi, generating high-fidelity question papers (MCQs, Short/Long answers), and generating personalized study insights for students.
 
+This project demonstrates **dual-mode AI document processing**: it uses a full-context prompt scanner for short documents (<8000 tokens), and true **Retrieval-Augmented Generation (RAG)** featuring recursive character chunking, Gemini embeddings (`text-embedding-004`), and local vector indexing via Chroma DB for larger documents/textbooks.
+
+
 ---
 
 ## ✨ Features
@@ -197,3 +200,23 @@ Generates syntax-fill, debugging, output-tracing, or conceptual questions for sp
   ]
 }
 ```
+
+---
+
+## 🧪 Evals
+
+To catch silent prompt regressions (where changes to prompts degrade question quality or formatting), Qnario includes an automated AI evaluation harness.
+
+### What is Tested
+1. **Syllabus Unit Verbatim Match:** Verifies that extracted units exactly match expected titles, ensuring no loose rewordings or paraphrasing occur during parsing.
+2. **Schema & Count Verification:** Checks that output JSON arrays matches required formats (keys, options list, count, answers) for all question types.
+3. **Absurd Option Detection:** Screens for trivial MCQ placeholder text (such as duplicate options or generic "Option A" text).
+4. **Duplicate Batches Detection:** Scans for exact copy-paste question collisions within single batches.
+5. **Quality Judge Rating:** Employs an LLM-as-a-judge prompt to rate correctness, topic relevance, and difficulty on a 1-5 scale.
+
+### How to Run Locally
+Run the eval runner script from the repository root:
+```bash
+python ai-service/evals/eval_runner.py
+```
+This generates a markdown performance report at `ai-service/evals/eval_report.md` and a JSON score report at `ai-service/evals/eval_report.json`.

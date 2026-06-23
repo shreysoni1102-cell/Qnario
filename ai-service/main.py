@@ -1,10 +1,13 @@
 import logging
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
+import json
 
 from services.gemini_service import GeminiQuestionGenerator
+from services.retrieval_service import RetrievalService
 from config import PYTHON_PORT, DEBUG
 
 # Configure Logger
@@ -26,8 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize AI Service instance
+# Initialize AI Service instances
 ai_generator = GeminiQuestionGenerator()
+retrieval_service = RetrievalService()
 
 
 # ==================== PYDANTIC MODELS FOR SCHEMA VALIDATION ====================
@@ -47,6 +51,14 @@ class GenerationRequest(BaseModel):
     specific_topics: Optional[str] = None
     specificTopics: Optional[str] = None
     marks: Optional[Any] = 1
+
+class IndexDocumentRequest(BaseModel):
+    syllabus_id: str
+    text: str
+
+class RAGGenerationRequest(GenerationRequest):
+    syllabus_id: str
+
 
 class SyllabusRequest(BaseModel):
     text: str
@@ -93,7 +105,7 @@ async def health_check():
 @app.post("/generate")
 @app.post("/api/generate-questions")
 async def generate_questions(payload: GenerationRequest):
-    """Generates exams questions using Gemini or fallback Groq engines."""
+    """Generates exams questions using Gemini or fallback Groq engines with streaming."""
     try:
         # Map overlapping key parameters
         topic = payload.topic or payload.chapter or "General"
@@ -103,33 +115,22 @@ async def generate_questions(payload: GenerationRequest):
         specific_topics = payload.specific_topics or payload.specificTopics
         marks = payload.marks or 1
 
-        logger.info(f"🚀 [AI Gen] Generating {count} {q_type} questions on Topic: {topic} (Subject: {subject})")
+        logger.info(f"🚀 [AI Gen] Streaming {count} {q_type} questions on Topic: {topic} (Subject: {subject})")
         
-        result = ai_generator.generate_questions(
-            subject=subject,
-            topic=topic,
-            difficulty=payload.difficulty,
-            count=count,
-            question_type=q_type,
-            level=payload.level,
-            stream=payload.stream,
-            specific_topics=specific_topics,
-            marks=marks
+        return StreamingResponse(
+            sse_questions_generator(
+                subject=subject,
+                topic=topic,
+                difficulty=payload.difficulty,
+                count=count,
+                question_type=q_type,
+                level=payload.level,
+                stream=payload.stream,
+                specific_topics=specific_topics,
+                marks=marks
+            ),
+            media_type="text/event-stream"
         )
-
-        if result.get("success"):
-            logger.info(f"✅ [AI Gen] Successfully compiled {result.get('count')} questions from {result.get('source')}")
-            return result
-        else:
-            error_msg = result.get("error", "Unknown error")
-            if result.get("quota_exhausted"):
-                logger.warning(f"⚠️ [API Quota Exceeded]: {error_msg}")
-                raise HTTPException(status_code=429, detail=error_msg)
-            else:
-                logger.error(f"❌ [AI Failed]: {error_msg}")
-                raise HTTPException(status_code=500, detail=error_msg)
-    except HTTPException as he:
-        raise he
     except Exception as e:
         logger.error(f"❌ [Unhandled AI Exception]: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -222,6 +223,89 @@ async def generate_insights(payload: InsightsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def sse_questions_generator(subject, topic, difficulty, count, question_type, level, stream, specific_topics, marks, context=None):
+    try:
+        for question in ai_generator.generate_questions_stream(
+            subject=subject,
+            topic=topic,
+            difficulty=difficulty,
+            count=count,
+            question_type=question_type,
+            level=level,
+            stream=stream,
+            specific_topics=specific_topics,
+            marks=marks,
+            context=context
+        ):
+            yield f"data: {json.dumps(question)}\n\n"
+    except Exception as e:
+        logger.error(f"❌ [SSE Streaming Error]: {str(e)}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+@app.post("/api/index-document")
+async def index_document(payload: IndexDocumentRequest):
+    """Chunks and embeds document text, storing the embeddings in Chroma DB."""
+    try:
+        api_key = ai_generator.api_key
+        logger.info(f"🚀 [RAG Index] Indexing document syllabus_id: {payload.syllabus_id}")
+        result = retrieval_service.index_document(payload.syllabus_id, payload.text, api_key)
+        if result.get("success"):
+            return result
+        else:
+            raise HTTPException(status_code=500, detail=result.get("error", "Indexing failed"))
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"❌ [RAG Index Error]: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/generate-questions-rag")
+async def generate_questions_rag(payload: RAGGenerationRequest):
+    """Retrieves context chunks matching the topic, and generates questions using RAG (streaming)."""
+    try:
+        syllabus_id = payload.syllabus_id
+        topic = payload.topic or payload.chapter or "General"
+        subject = payload.subject or payload.subjectName or "General"
+        count = payload.count or payload.numQuestions or 5
+        q_type = payload.question_type or payload.questionType or "MCQ"
+        specific_topics = payload.specific_topics or payload.specificTopics
+        marks = payload.marks or 1
+
+        query = specific_topics if specific_topics else topic
+        api_key = ai_generator.api_key
+
+        logger.info(f"🔍 [RAG Retrieve] Querying Chroma for syllabus_id: {syllabus_id}, Query: {query}")
+        chunks = retrieval_service.retrieve_chunks(syllabus_id, query, api_key, k=4)
+        context = "\n---\n".join(chunks)
+
+        logger.info(f"🚀 [RAG Gen] Streaming {count} {q_type} questions using retrieved context for Subject: {subject}")
+        
+        return StreamingResponse(
+            sse_questions_generator(
+                subject=subject,
+                topic=topic,
+                difficulty=payload.difficulty,
+                count=count,
+                question_type=q_type,
+                level=payload.level,
+                stream=payload.stream,
+                specific_topics=specific_topics,
+                marks=marks,
+                context=context
+            ),
+            media_type="text/event-stream"
+        )
+    except Exception as e:
+        logger.error(f"❌ [RAG Gen Error]: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ [RAG Gen Error]: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 class CodingRequest(BaseModel):
     language: Optional[str] = "Python"
     topic: Optional[str] = "Arrays"
@@ -259,3 +343,5 @@ if __name__ == '__main__':
     import uvicorn
     logger.info(f"Starting FastAPI AI Microservice on port {PYTHON_PORT}")
     uvicorn.run(app, host="0.0.0.0", port=PYTHON_PORT)
+
+# Trigger reload for GeminiQuestionGenerator re-instantiation

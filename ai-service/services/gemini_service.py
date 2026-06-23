@@ -5,31 +5,48 @@ import time
 from typing import Any, Dict, List
 import requests
 
-from config import GEMINI_API_KEY, GROQ_API_KEY
+from config import GEMINI_API_KEY, GROQ_API_KEY, GEMINI_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
 
 class GeminiQuestionGenerator:
+    @property
+    def model(self):
+        import config
+        import importlib
+        importlib.reload(config)
+        return config.GEMINI_MODEL_NAME
+
+    @property
+    def api_key(self):
+        import config
+        import importlib
+        importlib.reload(config)
+        return config.GEMINI_API_KEY
+
+    @property
+    def groq_key(self):
+        import config
+        import importlib
+        importlib.reload(config)
+        return config.GROQ_API_KEY
+
     def __init__(self):
-        self.primary_model = "gemini-flash-latest"
-        self.model = self.primary_model
-        self.api_key = GEMINI_API_KEY
-        self.groq_key = GROQ_API_KEY
         logger.info(f"Using Gemini model: {self.model}")
 
     def _chat_groq(self, prompt: str, max_tokens: int = 2048) -> Dict[str, Any]:
         if not self.groq_key:
             return {"success": False, "error": "GROQ_API_KEY is missing"}
         
-        groq_max = min(max_tokens, 2048)
+        groq_max = min(max_tokens, 8000)  # Groq supports up to 8192; raised from 2048 so full multi-unit syllabi fit in response
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.groq_key}",
             "Content-Type": "application/json"
         }
         # Try multiple Groq models in order
-        for groq_model in ["llama-3.3-70b-versatile", "llama3-8b-8192", "mixtral-8x7b-32768"]:
+        for groq_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
             payload = {
                 "model": groq_model,
                 "messages": [{"role": "user", "content": prompt}],
@@ -74,23 +91,35 @@ class GeminiQuestionGenerator:
             "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}
         }
 
-        try:
-            response = requests.post(self.url, headers=headers, json=payload, timeout=60)
-            if response.status_code == 200:
-                resp_json = response.json()
-                content = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                return {"success": True, "content": content}
-            elif response.status_code == 404 or response.status_code == 403:
-                logger.warning(f"Gemini {response.status_code} Error. Falling back to Groq...")
-                return self._chat_groq(get_text_prompt(prompt), max_tokens)
-            elif response.status_code == 429:
-                time.sleep(2)
-                return self._chat_groq(get_text_prompt(prompt), max_tokens)
-            else:
-                return self._chat_groq(get_text_prompt(prompt), max_tokens)
-        except Exception as e:
-            logger.error(f"Gemini Exception: {str(e)}. Falling back to Groq...")
-            return self._chat_groq(get_text_prompt(prompt), max_tokens)
+        # Try Gemini - immediately fall back to Groq on quota errors (429) or permanent errors
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(self.url, headers=headers, json=payload, timeout=20)
+                if response.status_code == 200:
+                    resp_json = response.json()
+                    content = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    return {"success": True, "content": content}
+                
+                logger.warning(f"Gemini API attempt {attempt + 1} failed with status {response.status_code}: {response.text[:300]}")
+                
+                # 429 = quota exhausted, 403/404 = permanent error — go straight to Groq, no retry
+                if response.status_code in [403, 404, 429]:
+                    logger.warning(f"Gemini returned {response.status_code}. Skipping retries, falling back to Groq immediately.")
+                    break
+                
+                # For transient errors like 503, do one retry
+                if attempt < max_retries - 1:
+                    sleep_time = 2
+                    logger.info(f"Retrying Gemini in {sleep_time}s...")
+                    time.sleep(sleep_time)
+            except Exception as e:
+                logger.error(f"Gemini Exception on attempt {attempt + 1}: {str(e)}")
+                break  # Don't retry on connection errors, go to Groq immediately
+
+        # Fallback to Groq if Gemini completely fails
+        logger.warning("Gemini failed all attempts. Falling back to Groq...")
+        return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
     _TOKENS_PER_QUESTION = {
         'MCQ': 400,
@@ -118,7 +147,7 @@ class GeminiQuestionGenerator:
     def _tokens_for(self, question_type: str, count: int) -> int:
         return self._MAX_TOKENS_CAP
 
-    def generate_questions(self, subject, topic, difficulty, count=5, question_type="MCQ", level=None, stream=None, specific_topics=None, marks=1):
+    def generate_questions(self, subject, topic, difficulty, count=5, question_type="MCQ", level=None, stream=None, specific_topics=None, marks=1, context=None):
         norm_marks = self._normalize_marks(marks)
         batch_size = self._batch_size_for(question_type)
 
@@ -129,7 +158,7 @@ class GeminiQuestionGenerator:
                 batch_count = min(remaining, batch_size)
                 batch_result = self._generate_single_batch(
                     subject, topic, difficulty, batch_count,
-                    question_type, level, stream, specific_topics, norm_marks
+                    question_type, level, stream, specific_topics, norm_marks, context
                 )
                 all_questions.extend(batch_result)
                 remaining -= batch_count
@@ -148,7 +177,7 @@ class GeminiQuestionGenerator:
 
         questions = self._generate_single_batch(
             subject, topic, difficulty, count,
-            question_type, level, stream, specific_topics, norm_marks
+            question_type, level, stream, specific_topics, norm_marks, context
         )
 
         return {
@@ -158,8 +187,28 @@ class GeminiQuestionGenerator:
             "source": "gemini",
         }
 
-    def _generate_single_batch(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks):
-        prompt = self._build_prompt(subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks)
+    def generate_questions_stream(self, subject, topic, difficulty, count=5, question_type="MCQ", level=None, stream=None, specific_topics=None, marks=1, context=None):
+        norm_marks = self._normalize_marks(marks)
+        batch_size = self._batch_size_for(question_type)
+
+        q_idx = 1
+        remaining = count
+        while remaining > 0:
+            batch_count = min(remaining, batch_size)
+            batch_result = self._generate_single_batch(
+                subject, topic, difficulty, batch_count,
+                question_type, level, stream, specific_topics, norm_marks, context
+            )
+            for q in batch_result:
+                q['questionNumber'] = q_idx
+                q_idx += 1
+                yield q
+            remaining -= batch_count
+            if remaining > 0:
+                time.sleep(self._INTER_BATCH_DELAY)
+
+    def _generate_single_batch(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks, context=None):
+        prompt = self._build_prompt(subject, topic, difficulty, count, question_type, level, stream, specific_topics, norm_marks, context)
         max_tok = self._tokens_for(question_type, count)
         logger.info(f"Calling Gemini: {count} × {question_type}, max_tokens={max_tok}")
         
@@ -268,6 +317,105 @@ class GeminiQuestionGenerator:
             questions.append(q)
         return {"success": True, "questions": questions}
     def extract_syllabus_topics(self, text_content, subject_hint, pdf_base64=None):
+        # Trigger pruning on large text contents to prevent 503 payload/time limits on Gemini
+        # and 413 request size limits on the Groq fallback.
+        if not pdf_base64 and len(text_content) > 10000:
+            logger.info(f"Large text content detected ({len(text_content)} chars). Running structural filter...")
+            try:
+                def clean_duplicate_segments(line):
+                    # Split by tab or multiple spaces (>=2)
+                    segments = re.split(r'\t| {2,}', line)
+                    seen = set()
+                    unique_segs = []
+                    for seg in segments:
+                        s = seg.strip()
+                        if s and s not in seen:
+                            seen.add(s)
+                            unique_segs.append(s)
+                    cleaned = " | ".join(unique_segs)
+                    
+                    # Word-level duplicate cleanup
+                    words = cleaned.split()
+                    if len(words) > 4:
+                        for n in range(1, len(words) // 2 + 1):
+                            for i in range(len(words) - 2*n + 1):
+                                sub1 = words[i:i+n]
+                                sub2 = words[i+n:i+2*n]
+                                if sub1 == sub2:
+                                    words = words[:i+n] + words[i+2*n:]
+                                    break
+                    return " ".join(words)
+
+                lines = text_content.split("\n")
+                filtered_lines = []
+                
+                skip_patterns = [
+                    r'^\s*$',
+                    r'^reprint\b',
+                    r'^science\s+\d+$',
+                    r'^electricity\s+\d+$',
+                    r'^biology\s+\d+$',
+                    r'^physics\s+\d+$',
+                    r'^chemistry\s+\d+$',
+                    r'^\d+\s*$',
+                    r'^--\s*\d+\s*of\s*\d+\s*--$',
+                    r'^example\b',
+                    r'^solution\b',
+                    r'^\??\s*questions\b',
+                    r'^figure\b',
+                    r'^table\b',
+                    r'^activity\b',
+                    r'^[A-Za-z]\s*=\s*.+$',
+                    r'^I\s*=\s*.+$',
+                    r'^V\s*=\s*.+$',
+                    r'^R\s*=\s*.+$',
+                    r'^H\s*=\s*.+$',
+                    r'^[0-9+\-*/=×÷\s\.\(\)]+$',
+                ]
+                compiled_skips = [re.compile(p, re.IGNORECASE) for p in skip_patterns]
+
+                for line in lines:
+                    line_str = line.strip()
+                    if not line_str:
+                        continue
+                        
+                    should_skip = False
+                    for pattern in compiled_skips:
+                        if pattern.match(line_str):
+                            should_skip = True
+                            break
+                    if should_skip:
+                        continue
+                    
+                    has_sec_num = re.match(r'^(\d+(\.\d+)*|[I|V|X]+\b)\s+[A-Z]', line_str)
+                    is_uppercase = line_str.isupper() and len(line_str) > 3
+                    is_short_heading = len(line_str) < 65 and not line_str.endswith(('.', ',', ';', ':', '?', '!')) and (line_str[0].isupper() if line_str else False)
+                    is_list_item = (line_str.startswith('-') or line_str.startswith('•') or re.match(r'^\([a-z0-9]\)', line_str)) and not re.search(r'[=×+]', line_str)
+                    is_unit_header = re.match(r'^(unit|chapter|module|part)\b', line_str, re.IGNORECASE)
+                    
+                    if has_sec_num or is_uppercase or is_short_heading or is_list_item or is_unit_header:
+                        if len(line_str) < 5 and not has_sec_num:
+                            continue
+                        cleaned = clean_duplicate_segments(line_str)
+                        if cleaned:
+                            filtered_lines.append(cleaned)
+                
+                unique_lines = []
+                for line in filtered_lines:
+                    if not unique_lines or line != unique_lines[-1]:
+                        unique_lines.append(line)
+                
+                pruned = "\n".join(unique_lines)
+                if len(pruned) > 500:
+                    logger.info(f"Successfully pruned text from {len(text_content)} to {len(pruned)} chars.")
+                    text_content = pruned[:6000]  # Kept small enough to stay under token limits
+                else:
+                    logger.warning("Pruning resulted in too little text. Falling back to simple slicing.")
+                    text_content = text_content[:5000]
+            except Exception as e:
+                logger.error(f"Error during text pruning: {e}. Falling back to slicing.")
+                text_content = text_content[:5000]
+
         if pdf_base64:
             prompt_text = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
 
@@ -376,16 +524,37 @@ Return ONLY valid JSON in this exact format, nothing else:
 }}
 
 Syllabus document text:
-{text_content[:15000]}
+{text_content}
 
 REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
             logger.info(f"Extracting syllabus from {len(text_content)} chars...")
 
-        result = self._chat(prompt, max_tokens=4000, temperature=0.1)
+        result = self._chat(prompt, max_tokens=1500, temperature=0.1)
         if result["success"]:
             logger.info("Gemini call successful, parsing response...")
             parsed = self._parse_json_object(result["content"])
-            if parsed:
+            if parsed and isinstance(parsed, dict) and "units" in parsed:
+                original_units = parsed["units"]
+                new_units = []
+                unit_counter = 1
+                for u in original_units:
+                    chapters = u.get("chapters", [])
+                    for c in chapters:
+                        ch_name = c.get("chapterName") or c.get("chapter") or u.get("unitName") or f"Topic {unit_counter}"
+                        new_units.append({
+                            "unitNumber": unit_counter,
+                            "unitName": ch_name,
+                            "chapters": [
+                                {
+                                    "chapterName": ch_name,
+                                    "topics": c.get("topics", [])
+                                }
+                            ]
+                        })
+                        unit_counter += 1
+                parsed["units"] = new_units
+                return {"success": True, "syllabus": parsed}
+            elif parsed:
                 return {"success": True, "syllabus": parsed}
             else:
                 logger.error(f"Failed to parse Gemini JSON. Raw content: {result['content'][:500]}")
@@ -411,9 +580,10 @@ Return a JSON object with:
                 return {"success": True, "insights": parsed}
         return {"success": False, "error": "Failed to generate insights"}
 
-    def _build_prompt(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, marks):
+    def _build_prompt(self, subject, topic, difficulty, count, question_type, level, stream, specific_topics, marks, context=None):
         effective_topic = specific_topics if specific_topics else topic
         marks_str = str(marks).replace('M', '')
+        context_str = f"Context Information:\n{context}\n\nUse ONLY the context information above to generate the questions.\n" if context else ""
         
         if question_type in ['MCQ', 'Multiple Choice Question (MCQ)', 'Single Correct MCQ']:
             options_spec = '"options": [{"id": "A", "text": "<real answer text>"}, {"id": "B", "text": "<real answer text>"}, {"id": "C", "text": "<real answer text>"}, {"id": "D", "text": "<real answer text>"}]'
@@ -454,7 +624,7 @@ Return a JSON object with:
             answer_spec = '"answer": {"explanation": "detailed model answer here (4-6 sentences)"}'
             extra_instructions = 'Write a long-answer question requiring a detailed paragraph response. Leave options as empty array.'
 
-        return f"""Generate exactly {count} academic questions for {subject}.
+        return f"""{context_str}Generate exactly {count} academic questions for {subject}.
 Topic: {effective_topic}
 Difficulty: {difficulty}
 Question Type: {question_type}
@@ -817,3 +987,5 @@ IMPORTANT:
                 'answer': normalized_answer
             })
         return normalized
+
+# Hot-reload trigger after config model update completed

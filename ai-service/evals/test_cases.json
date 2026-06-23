@@ -1,0 +1,107 @@
+{
+  "syllabus_extraction": [
+    {
+      "id": "se_1",
+      "subject_hint": "Theory of Computation",
+      "text": "UNIT-I AUTOMATA FUNDAMENTALS: Introduction to formal proof, Finite Automata (FA), Deterministic Finite Automata (DFA), Non-deterministic Finite Automata (NFA), Transition diagrams.\nUNIT-II REGULAR EXPRESSIONS AND LANGUAGES: Regular Expressions, Equivalence of DFA and Regular Expressions, Pumping Lemma for regular languages.",
+      "expected_units": [
+        "UNIT-I: AUTOMATA FUNDAMENTALS",
+        "UNIT-II: REGULAR EXPRESSIONS AND LANGUAGES"
+      ]
+    },
+    {
+      "id": "se_2",
+      "subject_hint": "Database Management Systems",
+      "text": "UNIT 1 INTRODUCTION TO DBMS: Database System Applications, View of Data, Database Languages, Relational Databases, Database Design.\nUNIT 2 RELATIONAL MODEL AND SQL: Structure of Relational Databases, Database Schema, Keys, Schema Diagrams, Query Languages, SQL Data Definition.",
+      "expected_units": [
+        "UNIT 1: INTRODUCTION TO DBMS",
+        "UNIT 2: RELATIONAL MODEL AND SQL"
+      ]
+    },
+    {
+      "id": "se_3",
+      "subject_hint": "Operating Systems",
+      "text": "UNIT-I PROCESS MANAGEMENT: Introduction to OS, Process Concept, Process Scheduling, Operations on Processes, Inter-process Communication.\nUNIT-II PROCESS SYNCHRONIZATION: The Critical-Section Problem, Peterson's Solution, Synchronization Hardware, Mutex Locks, Semaphores.",
+      "expected_units": [
+        "UNIT-I: PROCESS MANAGEMENT",
+        "UNIT-II: PROCESS SYNCHRONIZATION"
+      ]
+    },
+    {
+      "id": "se_4",
+      "subject_hint": "Computer Networks",
+      "text": "UNIT I PHYSICAL LAYER: Introduction, Data and Signals, Digital Transmission, Analog Transmission, Multiplexing.\nUNIT II DATA-LINK LAYER: Link Layer Addressing, Error Detection and Correction, Data Link Control, Media Access Control.",
+      "expected_units": [
+        "UNIT I: PHYSICAL LAYER",
+        "UNIT II: DATA-LINK LAYER"
+      ]
+    },
+    {
+      "id": "se_5",
+      "subject_hint": "Software Engineering",
+      "text": "UNIT I SOFTWARE PROCESS MODELS: Introduction to Software Engineering, Software Process, Perspective and Specialized Process Models.\nUNIT II REQUIREMENTS ANALYSIS AND SPECIFICATION: Software Requirements, Functional and Non-Functional, User requirements, System requirements.",
+      "expected_units": [
+        "UNIT I: SOFTWARE PROCESS MODELS",
+        "UNIT II: REQUIREMENTS ANALYSIS AND SPECIFICATION"
+      ]
+    }
+  ],
+  "question_generation": [
+    {
+      "id": "qg_1",
+      "subject": "Physics",
+      "topic": "Newton's Laws of Motion",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "count": 3
+    },
+    {
+      "id": "qg_2",
+      "subject": "Chemistry",
+      "topic": "Periodic Table and Chemical Bonding",
+      "difficulty": "Medium",
+      "question_type": "True/False",
+      "count": 2
+    },
+    {
+      "id": "qg_3",
+      "subject": "Mathematics",
+      "topic": "Differential Calculus and Limits",
+      "difficulty": "Hard",
+      "question_type": "Short Answer",
+      "count": 2
+    },
+    {
+      "id": "qg_4",
+      "subject": "Biology",
+      "topic": "Cell Structure and Organelles",
+      "difficulty": "Easy",
+      "question_type": "Fill in the blanks",
+      "count": 3
+    },
+    {
+      "id": "qg_5",
+      "subject": "Computer Science",
+      "topic": "Binary Search Trees",
+      "difficulty": "Medium",
+      "question_type": "MCQ",
+      "count": 2
+    },
+    {
+      "id": "qg_6",
+      "subject": "Economics",
+      "topic": "Supply and Demand Curves",
+      "difficulty": "Hard",
+      "question_type": "Long Answer",
+      "count": 1
+    },
+    {
+      "id": "qg_7",
+      "subject": "History",
+      "topic": "The French Revolution",
+      "difficulty": "Medium",
+      "question_type": "Case Study",
+      "count": 1
+    }
+  ]
+}

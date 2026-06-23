@@ -69,4 +69,19 @@ server/err.txt
 # Uploaded syllabus files (user data, not source code)
 server/uploads/
 
+# Vector database storage (auto-generated, not source code)
+ai-service/chroma_db/
+
+# Scratch & temporary workspace files
+scratch/
+
+# User uploaded PDFs / test files (not source code)
+*.pdf
+
+# Python eval reports (auto-generated)
+ai-service/evals/eval_report.json
+ai-service/evals/eval_report.md
+
+
+
 

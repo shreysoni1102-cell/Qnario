@@ -23,6 +23,7 @@ const SyllabusUpload = () => {
     const [syllabusId, setSyllabusId] = useState('');
     const [extractedData, setExtractedData] = useState(null);
     const [isScanning, setIsScanning] = useState(false);
+    const [isRAGActive, setIsRAGActive] = useState(false);
 
     // Step 2: Syllabus tree states
     const [openUnitIdx, setOpenUnitIdx] = useState(0);
@@ -43,6 +44,7 @@ const SyllabusUpload = () => {
     ]);
     const [selectedChapters, setSelectedChapters] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
 
     // Step 4: Draft Paper states
     const [paperId, setPaperId] = useState('');
@@ -85,6 +87,7 @@ const SyllabusUpload = () => {
             if (res.data.success) {
                 setSyllabusId(res.data.syllabusId);
                 setExtractedData(res.data.extracted);
+                setIsRAGActive(res.data.useRAG || false);
                 
                 // Prefill selected chapters with all extracted ones
                 const chapters = (res.data.extracted.units || []).flatMap(u => 
@@ -167,14 +170,16 @@ const SyllabusUpload = () => {
     };
 
     // Step 3 submit: Generate paper from syllabus + pattern
-    const handleGeneratePaper = async () => {
+    const handleGeneratePaper = () => {
         setErrorMsg('');
         if (selectedChapters.length === 0) {
             setErrorMsg('Select at least one chapter to generate questions.');
             return;
         }
 
-        setIsGenerating(true);
+        setQuestions([]);
+        setStep(4);
+        setIsStreaming(true);
 
         const payload = {
             paperType,
@@ -187,18 +192,28 @@ const SyllabusUpload = () => {
             selectedChapters
         };
 
-        try {
-            const res = await syllabusAPI.generatePaper(syllabusId, payload);
-            if (res.data.success) {
-                setPaperId(res.data.paperId);
-                setQuestions(res.data.questions);
-                setStep(4);
+        syllabusAPI.generatePaperStream(
+            syllabusId,
+            payload,
+            (q) => {
+                setQuestions(prev => {
+                    if (prev.some(x => x.questionNo === q.questionNo)) {
+                        return prev;
+                    }
+                    return [...prev, q];
+                });
+            },
+            (data) => {
+                setPaperId(data.paperId);
+                setIsStreaming(false);
+                setSuccessMsg('AI question paper compiled successfully!');
+                setTimeout(() => setSuccessMsg(''), 4000);
+            },
+            (err) => {
+                setErrorMsg(err.message || 'Real-time question generation failed.');
+                setIsStreaming(false);
             }
-        } catch (err) {
-            setErrorMsg(err.response?.data?.error || 'Question generation failed.');
-        } finally {
-            setIsGenerating(false);
-        }
+        );
     };
 
     // Step 4 edit question text
@@ -612,14 +627,27 @@ const SyllabusUpload = () => {
                                 Confirm the curriculum topics extracted by Gemini AI before setting blueprint details.
                             </p>
                         </div>
-                        <span style={{ 
-                            padding: '6px 16px', borderRadius: '20px', 
-                            background: 'rgba(102, 126, 234, 0.15)', 
-                            border: '1px solid rgba(102, 126, 234, 0.35)', 
-                            fontSize: '0.82rem', fontWeight: '700', color: '#a78bfa' 
-                        }}>
-                            {(extractedData.units || []).length} Units Extracted
-                        </span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            {isRAGActive && (
+                                <span style={{ 
+                                    padding: '6px 16px', borderRadius: '20px', 
+                                    background: 'rgba(16, 185, 129, 0.15)', 
+                                    border: '1px solid rgba(16, 185, 129, 0.35)', 
+                                    fontSize: '0.82rem', fontWeight: '700', color: '#34d399',
+                                    display: 'inline-flex', alignItems: 'center', gap: '6px'
+                                }}>
+                                    <Sparkles size={14} /> Large Document Mode (RAG) Active
+                                </span>
+                            )}
+                            <span style={{ 
+                                padding: '6px 16px', borderRadius: '20px', 
+                                background: 'rgba(102, 126, 234, 0.15)', 
+                                border: '1px solid rgba(102, 126, 234, 0.35)', 
+                                fontSize: '0.82rem', fontWeight: '700', color: '#a78bfa' 
+                            }}>
+                                {(extractedData.units || []).length} Topics Extracted
+                            </span>
+                        </div>
                     </div>
 
                     <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px', marginBottom: '16px' }}>EXTRACTED TOPICS</div>
@@ -628,7 +656,7 @@ const SyllabusUpload = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '30px' }}>
                         {(extractedData.units || []).length === 0 ? (
                             <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '30px' }}>
-                                No units were detected. Proceed to generate general topics.
+                                No topics were detected. Proceed to generate general topics.
                             </p>
                         ) : (
                             (extractedData.units || []).map((u, ui) => {
@@ -659,10 +687,10 @@ const SyllabusUpload = () => {
                                             }}
                                         >
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Layers size={18} style={{ color: '#4facfe' }} /> {u.unit || u.unitName || `Unit ${ui + 1}`}
+                                                <Layers size={18} style={{ color: '#4facfe' }} /> Topic {ui + 1}: {String(u.unit || u.unitName || '').replace(/^(UNIT|CHAPTER|MODULE|PART)\s*[-–—:]*\s*[IVX0-9]+[-–—:]*\s*/i, '')}
                                             </span>
                                             <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                {(u.chapters || []).flatMap(c => c.topics || []).length} topics {isOpen ? '▴' : '▾'}
+                                                {(u.chapters || []).flatMap(c => c.topics || []).length} subtopics {isOpen ? '▴' : '▾'}
                                             </span>
                                         </div>
                                         
@@ -683,7 +711,7 @@ const SyllabusUpload = () => {
                                                                 onChange={(e) => { e.stopPropagation(); handleSelectAllTopicsInUnit(ui, allTopicsInUnit, e.target.checked); }}
                                                                 style={{ width: '16px', height: '16px', accentColor: '#667eea', cursor: 'pointer' }}
                                                             />
-                                                            Select All Topics in this Unit
+                                                            Select All Topics
                                                         </label>
                                                     </div>
 
@@ -700,9 +728,11 @@ const SyllabusUpload = () => {
                                                                 background: 'rgba(255, 255, 255, 0.02)'
                                                             }}
                                                         >
-                                                            <div style={{ fontWeight: '600', fontSize: '0.9rem', color: '#4facfe', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                <BookOpen size={14} /> {c.chapterName || c.chapter}
-                                                            </div>
+                                                            {((u.chapters || []).length > 1 && (c.chapterName || c.chapter) !== (u.unitName || u.unit)) && (
+                                                                <div style={{ fontWeight: '600', fontSize: '0.9rem', color: '#4facfe', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                    <BookOpen size={14} /> {c.chapterName || c.chapter}
+                                                                </div>
+                                                            )}
                                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                                 {(c.topics || []).map((t, ti) => {
                                                                     const isTopicSelected = selSet.has(t);
@@ -1108,46 +1138,73 @@ const SyllabusUpload = () => {
                 <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                     
                     {/* Draft compilation banner */}
-                    <div style={{ 
-                        background: 'rgba(16, 185, 129, 0.05)', 
-                        border: '1px solid #10b981', 
-                        padding: '24px', 
-                        borderRadius: '20px',
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '20px'
-                    }}>
-                        <div>
-                            <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.25rem', color: '#10b981', fontWeight: 'bold' }}>
-                                Paper Compiled Successfully!
-                            </h3>
-                            <p style={{ opacity: 0.7, fontSize: '0.85rem', marginTop: '2px' }}>
-                                AI compiled all sections. Total questions: {totalQCount}. You can edit or regenerate items.
-                            </p>
+                    {isStreaming ? (
+                        <div style={{ 
+                            background: 'rgba(245, 158, 11, 0.05)', 
+                            border: '1px solid #f59e0b', 
+                            padding: '24px', 
+                            borderRadius: '20px',
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '20px'
+                        }}>
+                            <div>
+                                <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.25rem', color: '#f59e0b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    AI is Generating Questions in Real-Time...
+                                </h3>
+                                <p style={{ opacity: 0.7, fontSize: '0.85rem', marginTop: '2px' }}>
+                                    Writing exam sections. Loaded {questions.length} questions so far. Please wait.
+                                </p>
+                            </div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontSize: '0.9rem', fontWeight: '700' }}>
+                                <div style={{ width: '18px', height: '18px', border: '2px solid rgba(245,158,11,0.2)', borderTop: '2px solid #f59e0b', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                Streaming...
+                            </div>
                         </div>
-                        <button 
-                            onClick={handleFinalise}
-                            style={{ 
-                                width: 'auto', 
-                                padding: '12px 28px', 
-                                background: 'linear-gradient(135deg, #10b981, #047857)',
-                                border: 'none',
-                                color: 'white',
-                                borderRadius: '10px',
-                                cursor: 'pointer',
-                                fontWeight: '700',
-                                fontSize: '0.9rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 6px 20px rgba(16, 185, 129, 0.3)'
-                            }}
-                        >
-                            Complete & Save Draft <CheckCircle2 size={18} />
-                        </button>
-                    </div>
+                    ) : (
+                        <div style={{ 
+                            background: 'rgba(16, 185, 129, 0.05)', 
+                            border: '1px solid #10b981', 
+                            padding: '24px', 
+                            borderRadius: '20px',
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '20px'
+                        }}>
+                            <div>
+                                <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.25rem', color: '#10b981', fontWeight: 'bold' }}>
+                                    Paper Compiled Successfully!
+                                </h3>
+                                <p style={{ opacity: 0.7, fontSize: '0.85rem', marginTop: '2px' }}>
+                                    AI compiled all sections. Total questions: {totalQCount}. You can edit or regenerate items.
+                                </p>
+                            </div>
+                            <button 
+                                onClick={handleFinalise}
+                                style={{ 
+                                    width: 'auto', 
+                                    padding: '12px 28px', 
+                                    background: 'linear-gradient(135deg, #10b981, #047857)',
+                                    border: 'none',
+                                    color: 'white',
+                                    borderRadius: '10px',
+                                    cursor: 'pointer',
+                                    fontWeight: '700',
+                                    fontSize: '0.9rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.3)'
+                                }}
+                            >
+                                Complete & Save Draft <CheckCircle2 size={18} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Stats summary bar */}
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
@@ -1328,6 +1385,32 @@ const SyllabusUpload = () => {
                                     </div>
                                 );
                             })
+                        )}
+                        {isStreaming && (
+                            <div style={{
+                                padding: '24px',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                border: '1px dashed rgba(255, 255, 255, 0.15)',
+                                borderRadius: '16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                marginTop: '10px'
+                            }}>
+                                <div style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    border: '3px solid rgba(102, 126, 234, 0.15)',
+                                    borderTop: '3px solid #667eea',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                }} />
+                                <span style={{ fontSize: '0.88rem', opacity: 0.7, fontWeight: '600' }}>
+                                    AI is writing questions... {questions.length} generated so far
+                                </span>
+                            </div>
                         )}
                     </div>
                 </div>

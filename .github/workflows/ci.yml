@@ -46,3 +46,53 @@ jobs:
         env:
           GROQ_API_KEY: dummy_key_for_ci
           GEMINI_API_KEY: dummy_key_for_ci
+
+  ai-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            gemini_service:
+              - 'ai-service/services/gemini_service.py'
+              - 'ai-service/evals/**'
+      
+      - name: Set up Python
+        if: steps.filter.outputs.gemini_service == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        if: steps.filter.outputs.gemini_service == 'true'
+        run: |
+          cd ai-service
+          pip install -r requirements.txt
+          pip install requests
+
+      - name: Run evals
+        if: steps.filter.outputs.gemini_service == 'true'
+        run: |
+          python ai-service/evals/eval_runner.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'dummy_key_for_ci' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'dummy_key_for_ci' }}
+
+      - name: Post Job Summary
+        if: steps.filter.outputs.gemini_service == 'true' && always()
+        run: |
+          if [ -f ai-service/evals/eval_report.md ]; then
+            cat ai-service/evals/eval_report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Eval Report
+        if: steps.filter.outputs.gemini_service == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-report
+          path: |
+            ai-service/evals/eval_report.json
+            ai-service/evals/eval_report.md
