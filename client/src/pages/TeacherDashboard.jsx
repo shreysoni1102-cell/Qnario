@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { syllabusAPI, examRoomAPI } from '../services/api';
 import { 
     LogOut, BookOpen, Sparkles, Monitor, PlusCircle, 
-    FileText, Calendar, CheckCircle, Copy, Check, ArrowRight, Play, Eye, Users, Trash2
+    FileText, Calendar, CheckCircle, Copy, Check, ArrowRight, Play, Eye, Users, Trash2, User
 } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -247,26 +247,48 @@ const TeacherDashboard = () => {
                     <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '2rem', fontWeight: '800' }}>Qnario</h1>
                     <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Welcome back, <span style={{ color: '#667eea', fontWeight: '600' }}>{user.name}</span>! (Teacher)</p>
                 </div>
-                <button 
-                    onClick={handleLogout}
-                    style={{
-                        padding: '10px 16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid var(--border)',
-                        color: 'white',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.25s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                >
-                    <LogOut size={16} /> Logout
-                </button>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button 
+                        onClick={() => navigate('/profile')}
+                        style={{
+                            padding: '10px 16px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid var(--border)',
+                            color: 'white',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.25s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(102, 126, 234, 0.15)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                    >
+                        <User size={16} /> My Profile
+                    </button>
+                    <button 
+                        onClick={handleLogout}
+                        style={{
+                            padding: '10px 16px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid var(--border)',
+                            color: 'white',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.25s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                    >
+                        <LogOut size={16} /> Logout
+                    </button>
+                </div>
             </div>
 
             {/* Stat Cards Row */}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { Users, BookOpen, GraduationCap, Shield, Trash2, LogOut, RefreshCw } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Shield, Trash2, LogOut, RefreshCw, User } from 'lucide-react';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -108,6 +108,10 @@ const AdminDashboard = () => {
                         <span>Students</span>
                     </li>
                 </ul>
+                <button className="admin-logout-btn" onClick={() => navigate('/profile')} style={{ marginBottom: '10px', background: 'rgba(255, 255, 255, 0.05)' }}>
+                    <User size={16} />
+                    <span>My Profile</span>
+                </button>
                 <button className="admin-logout-btn" onClick={handleLogout}>
                     <LogOut size={16} />
                     <span>Logout</span>

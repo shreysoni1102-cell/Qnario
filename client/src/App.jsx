@@ -18,6 +18,7 @@ import SyllabusUpload from './pages/SyllabusUpload';
 import PaperPreview from './pages/PaperPreview';
 import LiveMonitor from './pages/LiveMonitor';
 import AdminDashboard from './pages/AdminDashboard';
+import UserProfile from './pages/UserProfile';
 
 // Route guards to protect secure screens
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -127,6 +128,16 @@ const AppContent = () => {
                     element={
                         <ProtectedRoute allowedRoles={['admin']}>
                             <AdminDashboard />
+                        </ProtectedRoute>
+                    } 
+                />
+
+                {/* User Profile */}
+                <Route 
+                    path="/profile" 
+                    element={
+                        <ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}>
+                            <UserProfile />
                         </ProtectedRoute>
                     } 
                 />

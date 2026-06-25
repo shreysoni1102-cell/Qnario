@@ -22,6 +22,7 @@ export const authAPI = {
     signup: (name, email, password, role, otp) => API.post('/api/auth/signup', { name, email, password, role, otp }),
     logout: () => API.post('/api/auth/logout'),
     getProfile: () => API.get('/api/auth/profile'),
+    deleteOwnAccount: () => API.delete('/api/auth/profile'),
     forgotPassword: (email) => API.post('/api/auth/forgot-password', { email }),
     resetPassword: (token, newPassword) => API.post('/api/auth/reset-password', { token, newPassword }),
     adminLogin: (email, password) => API.post('/api/auth/admin-login', { email, password }),

@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { 
     LogOut, BookOpen, Award, CheckCircle, ShieldAlert, Sparkles, 
-    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle, Trash2, Code2
+    ArrowRight, BookMarked, History, PlayCircle, Trophy, HelpCircle, Trash2, Code2, User
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -170,6 +170,13 @@ const StudentDashboard = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <button 
+                        onClick={() => navigate('/profile')}
+                        className="btn btn-secondary"
+                        style={{ width: 'auto', padding: '12px 20px', borderRadius: '12px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <User size={16} /> My Profile
+                    </button>
                     <button 
                         onClick={handleLogout}
                         className="btn btn-secondary"

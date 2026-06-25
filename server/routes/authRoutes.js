@@ -12,7 +12,8 @@ const {
     getAllUsers,
     getUserById,
     updateUser,
-    deleteUser
+    deleteUser,
+    deleteOwnAccount
 } = require('../controllers/authController');
 
 const { authenticate, authorize } = require('../middleware/authMiddleware');
@@ -72,6 +73,7 @@ router.post(
 router.post('/logout', authenticate, logout);
 
 router.get('/profile', authenticate, getProfile);
+router.delete('/profile', authenticate, deleteOwnAccount);
 
 // ==================== PASSWORD RECOVERY ACTIONS ====================
 

@@ -423,6 +423,22 @@ const deleteUser = async (req, res) => {
     }
 };
 
+/**
+ * User: Self-remove account.
+ */
+const deleteOwnAccount = async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User account not found.' });
+        }
+        return res.json({ success: true, message: 'Your account has been deleted successfully.' });
+    } catch (error) {
+        console.error('Delete Own Account Error:', error);
+        return res.status(500).json({ message: 'Server error occurred during account deletion.' });
+    }
+};
+
 module.exports = {
     sendSignupOTP,
     signup,
@@ -435,5 +451,6 @@ module.exports = {
     getAllUsers,
     getUserById,
     updateUser,
-    deleteUser
+    deleteUser,
+    deleteOwnAccount
 };
