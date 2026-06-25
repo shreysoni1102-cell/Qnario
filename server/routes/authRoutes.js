@@ -125,4 +125,14 @@ router.route('/admin/user/:id')
     )
     .delete(authenticate, authorize('admin'), deleteUser);
 
+router.get('/debug-env', (req, res) => {
+    const rawUri = process.env.MONGODB_URI || 'NOT_SET';
+    const maskedUri = rawUri.replace(/:([^@]+)@/, ':****@');
+    return res.json({
+        MONGODB_URI_masked: maskedUri,
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT
+    });
+});
+
 module.exports = router;
