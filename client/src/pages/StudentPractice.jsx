@@ -157,7 +157,7 @@ const StudentPractice = () => {
 
             {/* Layout Grid */}
             {!submitted ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '25px' }}>
+                <div className="responsive-sidebar-grid">
                     
                     {/* Left Navigation Sidebar */}
                     <div className="glass-card-wide" style={{ padding: '20px', height: 'fit-content' }}>

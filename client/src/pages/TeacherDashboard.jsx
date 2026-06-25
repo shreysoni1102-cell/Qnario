@@ -242,7 +242,7 @@ const TeacherDashboard = () => {
             )}
 
             {/* Upper Navigation panel */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
                 <div>
                     <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '2rem', fontWeight: '800' }}>Qnario</h1>
                     <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Welcome back, <span style={{ color: '#667eea', fontWeight: '600' }}>{user.name}</span>! (Teacher)</p>
@@ -370,7 +370,7 @@ const TeacherDashboard = () => {
                             <p style={{ fontSize: '0.8rem', textAlign: 'center', maxWidth: '300px' }}>Upload a syllabus PDF or DOCX first to let Gemini generate academic test papers.</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                             {papers.map((paper) => (
                                 <div 
                                     key={paper.id}
@@ -470,7 +470,7 @@ const TeacherDashboard = () => {
                             <p style={{ fontSize: '0.8rem', textAlign: 'center', maxWidth: '300px' }}>Exams that are created will appear here to group and show student scores.</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                             {reports.map((report) => (
                                 <div 
                                     key={report.roomCode}

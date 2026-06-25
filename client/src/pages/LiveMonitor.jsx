@@ -389,7 +389,7 @@ const LiveMonitor = () => {
             )}
 
             {/* Header controllers */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
+            <div className="responsive-header">
                 <div>
                     <span style={{ fontSize: '0.75rem', color: '#667eea', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase' }}>
                         Live Proctoring Hub (Room: {code})
@@ -472,7 +472,7 @@ const LiveMonitor = () => {
             </div>
 
             {/* Layout middle segments */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '25px', marginBottom: '30px' }}>
+            <div style={{ marginBottom: '30px' }} className="responsive-two-col-grid">
                 
                 {/* Active Students logs list */}
                 <div className="glass-card-wide" style={{ padding: '24px', minHeight: '400px' }}>
@@ -491,15 +491,13 @@ const LiveMonitor = () => {
                                 <div 
                                     key={email}
                                     style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1.5fr 2fr 1fr',
-                                        alignItems: 'center',
                                         background: s.status === 'locked' ? 'rgba(245, 158, 11, 0.06)' : 'rgba(0,0,0,0.15)',
                                         border: s.status === 'locked' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border)',
                                         padding: '16px 20px',
                                         borderRadius: '10px',
                                         transition: 'all 0.3s ease'
                                     }}
+                                    className="live-monitor-row"
                                 >
                                     <div>
                                         <h4 style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>{s.name}</h4>

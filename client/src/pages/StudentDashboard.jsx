@@ -127,7 +127,6 @@ const StudentDashboard = () => {
                 background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.06), rgba(118, 75, 162, 0.06))',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 borderRadius: '24px',
-                padding: '30px 40px',
                 marginBottom: '40px',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -136,7 +135,7 @@ const StudentDashboard = () => {
                 gap: '20px',
                 position: 'relative',
                 overflow: 'hidden'
-            }} className="fade-in">
+            }} className="dashboard-header-card fade-in">
                 {/* Visual accent backdrop glow */}
                 <div style={{
                     position: 'absolute',
@@ -331,7 +330,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* Layout middle grids */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '25px', marginBottom: '35px' }}>
+            <div style={{ marginBottom: '35px' }} className="responsive-two-col-grid">
                 
                 {/* Recharts Analytics Panel with Dual Switched tab selectors */}
                 <div className="glass-card-wide" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
@@ -481,7 +480,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* Bottom grids: practice tests & historical list */}
-            <div id="ai-practice-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+            <div id="ai-practice-section" className="responsive-equal-grid">
                 
                 {/* AI Practice generating config with Personalized AI launcher recommendation */}
                 <div className="glass-card-wide" style={{ padding: '24px', position: 'relative' }}>

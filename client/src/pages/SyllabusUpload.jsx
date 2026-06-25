@@ -551,7 +551,7 @@ const SyllabusUpload = () => {
                         </div>
 
                         {/* Metadata input fields (Free text inputs as requested by user) */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                        <div style={{ marginBottom: '30px' }} className="responsive-equal-grid">
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.6)', letterSpacing: '0.5px' }}>SUBJECT TITLE</label>
                                 <input 
@@ -890,7 +890,7 @@ const SyllabusUpload = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+                        <div style={{ marginTop: '20px' }} className="responsive-equal-grid">
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'rgba(255,255,0.6)' }}>BLOOM'S TAXONOMY LEVEL</label>
                                 <select 
@@ -1030,15 +1030,12 @@ const SyllabusUpload = () => {
                                 <div 
                                     key={sec.id}
                                     style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr auto',
-                                        gap: '15px',
-                                        alignItems: 'center',
                                         background: 'rgba(0,0,0,0.15)',
                                         padding: '16px',
                                         borderRadius: '10px',
                                         border: '1px solid rgba(255, 255, 255, 0.08)'
                                     }}
+                                    className="syllabus-section-row"
                                 >
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>SECTION NAME</label>

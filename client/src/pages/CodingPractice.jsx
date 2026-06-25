@@ -484,7 +484,7 @@ const CodingPractice = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '20px' }}>
+                <div className="responsive-coding-grid">
                     {/* Navigator */}
                     <div className="glass-card-wide" style={{ padding: '18px', height: 'fit-content' }}>
                         <div style={{ fontSize: '0.75rem', fontWeight: 'bold', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Navigator</div>

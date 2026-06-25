@@ -658,3 +658,97 @@ body {
         linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
 }
+
+/* ==========================================================================
+   Responsive Layout Utilities & Media Queries
+   ========================================================================== */
+
+.responsive-two-col-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+}
+
+.responsive-equal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.responsive-sidebar-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 25px;
+}
+
+.responsive-coding-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+}
+
+.syllabus-section-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1.5fr 1fr 1fr auto;
+    gap: 15px;
+    align-items: center;
+}
+
+.live-monitor-row {
+    display: grid;
+    grid-template-columns: 1.5fr 2fr 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.dashboard-header-card {
+    padding: 30px 40px;
+}
+
+.responsive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    gap: 20px;
+}
+
+/* Media Query Overrides for Mobile Viewports */
+@media (max-width: 900px) {
+    .responsive-two-col-grid,
+    .responsive-equal-grid,
+    .responsive-sidebar-grid,
+    .responsive-coding-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .syllabus-section-row,
+    .live-monitor-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+    
+    .dashboard-header-card {
+        padding: 24px 20px !important;
+    }
+
+    .responsive-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .responsive-header > div {
+        width: 100%;
+    }
+
+    .responsive-header > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px !important;
+    }
+}
