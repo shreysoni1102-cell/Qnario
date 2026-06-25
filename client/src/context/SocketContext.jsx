@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (window.location.hostname.includes('vercel.app') ? 'https://qnario-backend.onrender.com' : '');
 
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
