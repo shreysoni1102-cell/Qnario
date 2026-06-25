@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: qnario_mongo_prod
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    # Notice we don't expose 27017 to the public internet for security.
+    # It is only accessible to services in this network.
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: qnario_ai_prod
+    restart: unless-stopped
+    env_file: ./ai-service/.env.prod
+    depends_on:
+      - mongodb
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: qnario_server_prod
+    restart: unless-stopped
+    env_file: ./server/.env.prod
+    depends_on:
+      - mongodb
+      - ai-service
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    container_name: qnario_client_prod
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:
