@@ -18,9 +18,10 @@ load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-GEMINI_MODEL_NAME = os.getenv('GEMINI_MODEL_NAME', 'gemini-flash-lite-latest')
+GEMINI_MODEL_NAME = os.getenv('GEMINI_MODEL_NAME', 'gemini-2.0-flash-lite')
 
-PYTHON_PORT = int(os.getenv('PYTHON_PORT', 5000))
+# Render assigns PORT dynamically; fall back to PYTHON_PORT or 10000
+PYTHON_PORT = int(os.getenv('PORT', os.getenv('PYTHON_PORT', 10000)))
 NODE_SERVER_URL = os.getenv('NODE_SERVER_URL', 'http://server:3000')
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
