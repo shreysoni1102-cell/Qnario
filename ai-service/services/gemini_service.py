@@ -408,10 +408,10 @@ class GeminiQuestionGenerator:
                 pruned = "\n".join(unique_lines)
                 if len(pruned) > 500:
                     logger.info(f"Successfully pruned text from {len(text_content)} to {len(pruned)} chars.")
-                    text_content = pruned[:6000]  # Kept small enough to stay under token limits
+                    text_content = pruned[:12000]  # Increased limit to capture all units in large syllabi
                 else:
                     logger.warning("Pruning resulted in too little text. Falling back to simple slicing.")
-                    text_content = text_content[:5000]
+                    text_content = text_content[:10000]
             except Exception as e:
                 logger.error(f"Error during text pruning: {e}. Falling back to slicing.")
                 text_content = text_content[:5000]
@@ -529,7 +529,7 @@ Syllabus document text:
 REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
             logger.info(f"Extracting syllabus from {len(text_content)} chars...")
 
-        result = self._chat(prompt, max_tokens=1500, temperature=0.1)
+        result = self._chat(prompt, max_tokens=4096, temperature=0.1)
         if result["success"]:
             logger.info("Gemini call successful, parsing response...")
             parsed = self._parse_json_object(result["content"])
