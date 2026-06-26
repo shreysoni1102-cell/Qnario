@@ -24,6 +24,7 @@ const SyllabusUpload = () => {
     const [extractedData, setExtractedData] = useState(null);
     const [isScanning, setIsScanning] = useState(false);
     const [isRAGActive, setIsRAGActive] = useState(false);
+    const [isDragActive, setIsDragActive] = useState(false);
 
     // Step 2: Syllabus tree states
     const [openUnitIdx, setOpenUnitIdx] = useState(0);
@@ -494,21 +495,25 @@ const SyllabusUpload = () => {
                         
                         {/* Drag & Drop File Zone */}
                         <div style={{
-                            border: '2px dashed rgba(102, 126, 234, 0.4)',
+                            border: file
+                                ? (isDragActive ? '2px dashed #10b981' : '2px solid #10b981')
+                                : (isDragActive ? '2px dashed #667eea' : '2px dashed rgba(102, 126, 234, 0.4)'),
                             borderRadius: '16px',
                             padding: '50px 30px',
                             textAlign: 'center',
                             cursor: 'pointer',
-                            background: 'rgba(102, 126, 234, 0.03)',
+                            background: file
+                                ? (isDragActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.04)')
+                                : (isDragActive ? 'rgba(102, 126, 234, 0.08)' : 'rgba(102, 126, 234, 0.03)'),
                             transition: 'all 0.3s ease',
                             marginBottom: '30px'
                         }}
                         onClick={() => document.getElementById('syllabus-file-input').click()}
-                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#667eea'; }}
-                        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.4)'; }}
+                        onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                        onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }}
                         onDrop={(e) => {
                             e.preventDefault();
-                            e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.4)';
+                            setIsDragActive(false);
                             if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
                         }}
                         >
@@ -520,8 +525,12 @@ const SyllabusUpload = () => {
                                 accept=".pdf,.docx,.txt,.jpg,.jpeg,.png"
                             />
                             
-                            <div style={{ color: '#667eea', marginBottom: '14px', fontSize: '2.5rem' }}>
-                                <Upload size={38} style={{ margin: '0 auto', opacity: 0.8 }} />
+                            <div style={{ color: file ? '#10b981' : '#667eea', marginBottom: '14px', fontSize: '2.5rem' }}>
+                                {file ? (
+                                    <CheckCircle2 size={38} style={{ margin: '0 auto', opacity: 0.9 }} />
+                                ) : (
+                                    <Upload size={38} style={{ margin: '0 auto', opacity: 0.8 }} />
+                                )}
                             </div>
                             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '6px' }}>
                                 {file ? file.name : 'Drag & Drop or Click to Select File'}
