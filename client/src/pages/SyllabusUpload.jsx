@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { syllabusAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getErrorMessage } from '../utils/errorHelpers';
 import { 
     Upload, FileText, Settings, Sparkles, CheckCircle2, 
     ArrowLeft, ArrowRight, Plus, Trash2, Edit3, Save, AlertTriangle,
@@ -108,7 +109,7 @@ const SyllabusUpload = () => {
                 setStep(2);
             }
         } catch (err) {
-            setErrorMsg(err.response?.data?.error || 'Syllabus scan failed. Check backend status.');
+            setErrorMsg(getErrorMessage(err));
         } finally {
             setIsScanning(false);
         }

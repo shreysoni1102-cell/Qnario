@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { examAPI, examRoomAPI } from '../services/api';
+import { getErrorMessage } from '../utils/errorHelpers';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell
@@ -69,7 +70,7 @@ const StudentDashboard = () => {
                 navigate(`/student/exam/${trimmedCode}`);
             }
         } catch (err) {
-            setJoinError(err.response?.data?.error || 'Invalid or closed exam room code.');
+            setJoinError(getErrorMessage(err));
         }
     };
 
