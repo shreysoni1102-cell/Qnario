@@ -152,7 +152,7 @@ const signup = async (req, res) => {
  */
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, expectedRole } = req.body;
         console.log(`🔍 [DEBUG] Login attempt: email="${email}" | origin="${req.headers.origin}" | ip="${req.ip}"`);
 
         if (!email || !password) {
@@ -169,6 +169,11 @@ const login = async (req, res) => {
         console.log(`🔍 [DEBUG] Password match: ${isMatch}`);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid email or password.' });
+        }
+
+        // Validate expectedRole if provided
+        if (expectedRole && user.role !== expectedRole) {
+            return res.status(403).json({ message: `This login is for ${expectedRole} accounts only. Please use the correct portal for your account type.` });
         }
 
         // Track user login timestamps

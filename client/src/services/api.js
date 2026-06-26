@@ -18,7 +18,7 @@ API.interceptors.request.use((config) => {
 
 export const authAPI = {
     sendSignupOTP: (name, email, password, role) => API.post('/api/auth/send-signup-otp', { name, email, password, role }),
-    login: (email, password) => API.post('/api/auth/login', { email, password }),
+    login: (email, password, expectedRole) => API.post('/api/auth/login', { email, password, expectedRole }),
     signup: (name, email, password, role, otp) => API.post('/api/auth/signup', { name, email, password, role, otp }),
     logout: () => API.post('/api/auth/logout'),
     getProfile: () => API.get('/api/auth/profile'),

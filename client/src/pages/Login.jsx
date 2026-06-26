@@ -116,7 +116,7 @@ const Login = () => {
         e.preventDefault();
         setErrorMsg('');
         setLoading(true);
-        const res = await login(email, password);
+        const res = await login(email, password, role);
         setLoading(false);
         if (res.success) {
             if (res.user.role === 'admin') navigate('/admin/dashboard');
