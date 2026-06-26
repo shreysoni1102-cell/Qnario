@@ -79,46 +79,69 @@ class GeminiQuestionGenerator:
                 return tp
             return p
 
+        # Detect if prompt contains inline PDF/image data (multimodal)
+        def has_inline_data(p):
+            if isinstance(p, list):
+                return any("inlineData" in part for part in p)
+            return False
+
         if not self.api_key:
             return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
-        
+
         parts = prompt if isinstance(prompt, list) else [{"text": prompt}]
         payload = {
             "contents": [{"parts": parts}],
             "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}
         }
 
-        # Try Gemini - immediately fall back to Groq on quota errors (429) or permanent errors
-        max_retries = 2
+        is_multimodal = has_inline_data(parts)
+        # Multimodal (PDF/image): retry on 429 with backoff — Groq can't OCR
+        # Text-only: immediately fall back to Groq on 429
+        max_retries = 4 if is_multimodal else 2
+        retry_delays = [15, 30, 45]
+
         for attempt in range(max_retries):
             try:
-                response = requests.post(self.url, headers=headers, json=payload, timeout=20)
+                response = requests.post(self.url, headers=headers, json=payload, timeout=60)
                 if response.status_code == 200:
                     resp_json = response.json()
                     content = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
                     return {"success": True, "content": content}
-                
+
                 logger.warning(f"Gemini API attempt {attempt + 1} failed with status {response.status_code}: {response.text[:300]}")
-                
-                # 429 = quota exhausted, 403/404 = permanent error — go straight to Groq, no retry
-                if response.status_code in [403, 404, 429]:
-                    logger.warning(f"Gemini returned {response.status_code}. Skipping retries, falling back to Groq immediately.")
+
+                # 403/404 = permanent error — fall back to Groq immediately
+                if response.status_code in [403, 404]:
+                    logger.warning(f"Gemini returned {response.status_code}. Permanent error, falling back to Groq.")
                     break
-                
-                # For transient errors like 503, do one retry
+
+                # 429 = rate limit — retry with backoff for PDF, fall back for text
+                if response.status_code == 429:
+                    if is_multimodal and attempt < max_retries - 1:
+                        wait = retry_delays[min(attempt, len(retry_delays) - 1)]
+                        logger.warning(f"Gemini 429 rate limit (PDF). Waiting {wait}s before retry {attempt + 2}/{max_retries}...")
+                        time.sleep(wait)
+                        continue
+                    else:
+                        logger.warning(f"Gemini 429. {'All PDF retries exhausted' if is_multimodal else 'Falling back to Groq'}.")
+                        break
+
+                # Transient errors (503 etc): one retry
                 if attempt < max_retries - 1:
-                    sleep_time = 2
-                    logger.info(f"Retrying Gemini in {sleep_time}s...")
-                    time.sleep(sleep_time)
+                    logger.info(f"Retrying Gemini in 2s...")
+                    time.sleep(2)
             except Exception as e:
                 logger.error(f"Gemini Exception on attempt {attempt + 1}: {str(e)}")
-                break  # Don't retry on connection errors, go to Groq immediately
+                break
 
-        # Fallback to Groq if Gemini completely fails
-        logger.warning("Gemini failed all attempts. Falling back to Groq...")
+        # Fallback to Groq
+        if is_multimodal:
+            logger.warning("Gemini failed for PDF/image. Groq fallback cannot OCR — topics may be incomplete.")
+        else:
+            logger.warning("Gemini failed all attempts. Falling back to Groq...")
         return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
     _TOKENS_PER_QUESTION = {
