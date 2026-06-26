@@ -73,6 +73,12 @@ class InsightsRequest(BaseModel):
 
 # ==================== ENDPOINT HANDLERS ====================
 
+@app.get("/")
+async def root():
+    """Root endpoint — confirms service is reachable (used by Render health checks)."""
+    return {"status": "ok", "service": "Qnario AI Microservice", "version": "2.0.0"}
+
+
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
