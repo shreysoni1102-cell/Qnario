@@ -225,20 +225,20 @@ const UserProfile = () => {
             )}
 
             {/* Security & Actions section */}
-            <div className="glass-card-wide fade-in" style={{ padding: '24px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
-                <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1.1rem', margin: '0 0 10px 0', color: '#f87171', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <ShieldAlert size={18} /> Danger Zone
+            <div className="glass-card-wide fade-in" style={{ padding: '16px 20px', border: '1px solid rgba(239, 68, 68, 0.05)', maxWidth: '500px', margin: '0 0 25px 0' }}>
+                <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '0.9rem', margin: '0 0 10px 0', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ShieldAlert size={14} style={{ color: 'rgba(255, 255, 255, 0.4)' }} /> Danger Zone
                 </h3>
-                <p style={{ opacity: 0.7, fontSize: '0.85rem', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                <p style={{ opacity: 0.6, fontSize: '0.8rem', lineHeight: '1.5', margin: '0 0 16px 0' }}>
                     Once you delete your account, there is no going back. All of your personal registries, exam scores, AI blueprints, and syllabus papers associated with this profile will be permanently deleted from the Qnario databases.
                 </p>
 
                 <button 
                     onClick={() => { setShowDeleteModal(true); setConfirmEmail(''); setDeleteError(''); }}
                     className="btn btn-danger"
-                    style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '10px' }}
+                    style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '8px', fontSize: '0.82rem' }}
                 >
-                    <Trash2 size={16} /> Delete Account permanently
+                    <Trash2 size={14} /> Delete Account permanently
                 </button>
             </div>
 
