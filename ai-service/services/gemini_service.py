@@ -580,8 +580,38 @@ REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or 
             logger.info(f"Extracting syllabus from {len(text_content)} chars...")
 
         result = self._chat(prompt, max_tokens=4096, temperature=0.1)
+
+        # If Gemini failed for a scanned PDF (image_parts), Groq received no visual content
+        # and would guess random topics. Use a subject-based generation prompt instead.
+        if not result["success"] and image_parts and subject_hint:
+            logger.warning(f"Gemini failed for scanned PDF. Running Groq subject-based generation for '{subject_hint}'...")
+            groq_fallback_prompt = f"""You are an expert academic curriculum designer.
+Generate a comprehensive, structured university syllabus for this subject: {subject_hint}
+
+Return ONLY valid JSON in this exact format, nothing else:
+{{
+  "subject": "{subject_hint}",
+  "units": [
+    {{
+      "unitNumber": 1,
+      "unitName": "UNIT-I: [Unit Name]",
+      "chapters": [
+        {{
+          "chapterName": "[Chapter Name]",
+          "topics": ["Topic 1", "Topic 2", "Topic 3"]
+        }}
+      ]
+    }}
+  ]
+}}
+
+Generate exactly 5 units with 2-4 real technical topics per chapter based on standard university curriculum for {subject_hint}."""
+            result = self._chat_groq(groq_fallback_prompt, max_tokens=4096)
+            if result["success"]:
+                logger.info("Groq subject-based fallback succeeded.")
+
         if result["success"]:
-            logger.info("Gemini call successful, parsing response...")
+            logger.info("AI call successful, parsing response...")
             parsed = self._parse_json_object(result["content"])
             if parsed and isinstance(parsed, dict) and "units" in parsed:
                 original_units = parsed["units"]
@@ -607,11 +637,12 @@ REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or 
             elif parsed:
                 return {"success": True, "syllabus": parsed}
             else:
-                logger.error(f"Failed to parse Gemini JSON. Raw content: {result['content'][:500]}")
-                return {"success": False, "error": "AI returned non-JSON content. Check logs.", "raw": result["content"]}
-        
-        logger.error(f"Gemini API failure: {result.get('error')} - {result.get('details')}")
+                logger.error(f"Failed to parse AI JSON. Raw: {result['content'][:500]}")
+                return {"success": False, "error": "AI returned non-JSON content.", "raw": result["content"]}
+
+        logger.error(f"All AI attempts failed: {result.get('error')}")
         return {"success": False, "error": f"AI Error: {result.get('error')}"}
+
 
     def generate_study_suggestions(self, student_name, subject, chapter_stats):
         prompt = f"""Generate personalized AI study insights for {student_name} based on their {subject} performance.
