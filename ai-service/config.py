@@ -18,7 +18,7 @@ load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-GEMINI_MODEL_NAME = os.getenv('GEMINI_MODEL_NAME', 'gemini-2.0-flash')
+GEMINI_MODEL_NAME = os.getenv('GEMINI_MODEL_NAME', 'gemini-1.5-flash')
 
 # Render assigns PORT dynamically; fall back to PYTHON_PORT or 10000
 PYTHON_PORT = int(os.getenv('PORT', os.getenv('PYTHON_PORT', 10000)))

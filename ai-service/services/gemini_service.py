@@ -340,6 +340,35 @@ class GeminiQuestionGenerator:
             questions.append(q)
         return {"success": True, "questions": questions}
     def extract_syllabus_topics(self, text_content, subject_hint, pdf_base64=None):
+        # --- Convert scanned PDF to compressed page images for efficient Gemini OCR ---
+        # Sending raw PDF base64 (~975KB) uses 50K+ tokens and causes 429 quota errors.
+        # Converting pages to compressed JPEGs (~50-80KB each) uses ~90% fewer tokens.
+        image_parts = None
+        if pdf_base64:
+            try:
+                import fitz  # PyMuPDF
+                import base64 as _b64
+                import io
+                pdf_bytes = _b64.b64decode(pdf_base64)
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                image_parts = []
+                for page_num in range(len(doc)):
+                    page = doc[page_num]
+                    mat = fitz.Matrix(1.5, 1.5)  # 1.5x zoom for readability
+                    pix = page.get_pixmap(matrix=mat)
+                    img_bytes = pix.tobytes(output="jpeg", jpg_quality=75)
+                    img_b64 = _b64.b64encode(img_bytes).decode('utf-8')
+                    image_parts.append({"inlineData": {"mimeType": "image/jpeg", "data": img_b64}})
+                    logger.info(f"Syllabus page {page_num + 1}: JPEG {len(img_bytes)} bytes")
+                doc.close()
+                logger.info(f"PDF converted to {len(image_parts)} page image(s) — raw PDF base64 replaced.")
+                pdf_base64 = None  # Use images instead of raw PDF
+            except ImportError:
+                logger.warning("PyMuPDF not available — using raw PDF base64 (higher token cost).")
+            except Exception as e:
+                logger.error(f"PDF-to-image conversion failed: {e} — falling back to raw PDF base64.")
+                image_parts = None
+
         # Trigger pruning on large text contents to prevent 503 payload/time limits on Gemini
         # and 413 request size limits on the Groq fallback.
         if not pdf_base64 and len(text_content) > 10000:
@@ -439,21 +468,19 @@ class GeminiQuestionGenerator:
                 logger.error(f"Error during text pruning: {e}. Falling back to slicing.")
                 text_content = text_content[:5000]
 
-        if pdf_base64:
-            prompt_text = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document.
+        if image_parts or pdf_base64:
+            prompt_text = f"""You are a strict syllabus parser. Your ONLY job is to extract structure from the given academic syllabus document image(s).
 
 CRITICAL RULES — You MUST follow these exactly:
-1. Use the EXACT unit names as written in the document. DO NOT rename, paraphrase, or reword them.
-   - If the syllabus says "UNIT-I AUTOMATA FUNDAMENTALS", the unitName MUST be "UNIT-I: AUTOMATA FUNDAMENTALS"
-   - If the syllabus says "UNIT-II REGULAR EXPRESSIONS AND LANGUAGES", the unitName MUST be "UNIT-II: REGULAR EXPRESSIONS AND LANGUAGES"
-   - NEVER substitute your own names like "Introduction to Theory of Computation" or "Finite Automata"
+1. Use the EXACT unit/chapter names as written in the document. DO NOT rename, paraphrase, or reword them.
 2. Keep the unitNumber as the ordinal (1 for UNIT-I, 2 for UNIT-II, etc.)
-3. For chapters inside each unit: if the syllabus has sub-headings, use them exactly. If not, create 1-2 chapters named after the main topic groups in that unit's content.
-4. For topics: extract the exact technical terms listed in the unit content (e.g., "Deterministic Finite Automata", "Pushdown Automata", "Pumping Lemma").
-5. DO NOT merge units together. Each UNIT in the syllabus must be a separate entry.
-6. DO NOT create units that are not in the syllabus.
+3. For chapters inside each unit: if the syllabus has sub-headings, use them exactly. If not, create 1-2 chapters from the main topic groups.
+4. For topics: extract the exact technical terms listed (e.g., "Binary Search Tree", "Dijkstra's Algorithm").
+5. DO NOT merge units together. Each UNIT in the syllabus MUST be a separate entry.
+6. DO NOT create units that are not in the document.
+7. Read ALL pages carefully before responding.
 
-Subject: {subject_hint or 'Auto-detect from document'}
+Subject hint: {subject_hint or 'Auto-detect from document'}
 
 Return ONLY valid JSON in this exact format, nothing else:
 {{
@@ -464,28 +491,28 @@ Return ONLY valid JSON in this exact format, nothing else:
       "unitName": "UNIT-I: EXACT NAME FROM DOCUMENT",
       "chapters": [
         {{
-          "chapterName": "Exact or inferred chapter name",
-          "topics": ["Exact Topic 1", "Exact Topic 2", "Exact Topic 3"]
+          "chapterName": "Chapter name",
+          "topics": ["Topic 1", "Topic 2", "Topic 3"]
         }}
       ]
     }}
   ]
 }}
 
-REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or merge units."""
-            
-            prompt = [
-                {
-                    "inlineData": {
-                        "mimeType": "application/pdf",
-                        "data": pdf_base64
-                    }
-                },
-                {
-                    "text": prompt_text
-                }
-            ]
-            logger.info(f"Extracting syllabus from base64 PDF ({len(pdf_base64)} chars)...")
+REMINDER: Copy unit names VERBATIM. Extract from what you SEE in the image, not from memory."""
+
+            if image_parts:
+                # Use rendered JPEG images — much fewer tokens than raw PDF
+                prompt = image_parts + [{"text": prompt_text}]
+                logger.info(f"Extracting syllabus from {len(image_parts)} JPEG page image(s)...")
+            else:
+                # Fallback: raw PDF base64
+                prompt = [
+                    {"inlineData": {"mimeType": "application/pdf", "data": pdf_base64}},
+                    {"text": prompt_text}
+                ]
+                logger.info(f"Extracting syllabus from raw PDF base64 ({len(pdf_base64)} chars)...")
+
         elif text_content.strip().startswith("Generate a comprehensive"):
             prompt = f"""You are an expert academic curriculum designer. Your job is to generate a comprehensive, structured syllabus for the requested subject and class/grade.
             
