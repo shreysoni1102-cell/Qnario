@@ -88,7 +88,9 @@ class GeminiQuestionGenerator:
         if not self.api_key:
             return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        # gemini-1.5-x models use the v1 API; gemini-2.0-x models use v1beta
+        api_version = "v1" if "gemini-1.5" in self.model else "v1beta"
+        self.url = f"https://generativelanguage.googleapis.com/{api_version}/models/{self.model}:generateContent?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
 
         parts = prompt if isinstance(prompt, list) else [{"text": prompt}]
@@ -601,7 +603,8 @@ Here is an example of a CORRECT response for "Operating Systems":
 Now generate exactly 5 units for "{subject_hint}" following the SAME format.
 Use REAL technical topics specific to {subject_hint} — NOT placeholders like 'Topic 1' or 'Chapter name'.
 Return ONLY the JSON object. No explanation, no markdown, no extra text."""
-            result = self._chat_groq(groq_fallback_prompt, max_tokens=4096)
+            result = self._chat_groq(groq_fallback_prompt, max_tokens=8000)
+
             if result["success"]:
                 logger.info("Groq subject-based fallback succeeded.")
 
