@@ -98,10 +98,10 @@ class GeminiQuestionGenerator:
         }
 
         is_multimodal = has_inline_data(parts)
-        # Multimodal (PDF/image): retry on 429 with backoff — Groq can't OCR
+        # Multimodal (PDF/image): retry once on 429 with short delay before Groq fallback
         # Text-only: immediately fall back to Groq on 429
-        max_retries = 4 if is_multimodal else 2
-        retry_delays = [15, 30, 45]
+        max_retries = 3 if is_multimodal else 2
+        retry_delays = [5, 10]  # short delays — user is waiting, don't keep them 90+ seconds
 
         for attempt in range(max_retries):
             try:
@@ -585,27 +585,17 @@ REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or 
         # and would guess random topics. Use a subject-based generation prompt instead.
         if not result["success"] and image_parts and subject_hint:
             logger.warning(f"Gemini failed for scanned PDF. Running Groq subject-based generation for '{subject_hint}'...")
-            groq_fallback_prompt = f"""You are an expert academic curriculum designer.
-Generate a comprehensive, structured university syllabus for this subject: {subject_hint}
+            # Use a concrete example so Groq does NOT return placeholder text
+            groq_fallback_prompt = f"""You are an expert academic curriculum designer. Generate a real university syllabus.
 
-Return ONLY valid JSON in this exact format, nothing else:
-{{
-  "subject": "{subject_hint}",
-  "units": [
-    {{
-      "unitNumber": 1,
-      "unitName": "UNIT-I: [Unit Name]",
-      "chapters": [
-        {{
-          "chapterName": "[Chapter Name]",
-          "topics": ["Topic 1", "Topic 2", "Topic 3"]
-        }}
-      ]
-    }}
-  ]
-}}
+Subject: {subject_hint}
 
-Generate exactly 5 units with 2-4 real technical topics per chapter based on standard university curriculum for {subject_hint}."""
+Here is an example of a CORRECT response for "Operating Systems":
+{{"subject":"Operating Systems","units":[{{"unitNumber":1,"unitName":"UNIT-I: Introduction to OS","chapters":[{{"chapterName":"OS Basics","topics":["Process Management","Memory Management","File Systems","CPU Scheduling"]}}]}},{{"unitNumber":2,"unitName":"UNIT-II: Process Synchronization","chapters":[{{"chapterName":"Synchronization","topics":["Mutex Locks","Semaphores","Deadlock Prevention","Banker's Algorithm"]}}]}}]}}
+
+Now generate exactly 5 units for "{subject_hint}" following the SAME format.
+Use REAL technical topics specific to {subject_hint} — NOT placeholders like 'Topic 1' or 'Chapter name'.
+Return ONLY the JSON object. No explanation, no markdown, no extra text."""
             result = self._chat_groq(groq_fallback_prompt, max_tokens=4096)
             if result["success"]:
                 logger.info("Groq subject-based fallback succeeded.")
