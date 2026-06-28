@@ -680,13 +680,19 @@ const uploadSyllabus = async (req, res) => {
             if (!textContent || textContent.trim().length < 20 || isScanned) {
                 try {
                     const fileBuffer = fs.readFileSync(filePath);
-                    pdfBase64 = fileBuffer.toString('base64');
-                    console.log(`📄 Scanned/Empty PDF detected, loaded ${fileBuffer.length} bytes for Base64 OCR...`);
+                    const MAX_PDF_BYTES = 5 * 1024 * 1024; // 5MB file size limit
+                    if (fileBuffer.length <= MAX_PDF_BYTES) {
+                        pdfBase64 = fileBuffer.toString('base64');
+                        console.log(`📄 Scanned/Empty PDF detected, loaded ${fileBuffer.length} bytes (base64: ${pdfBase64.length} chars) for OCR...`);
+                    } else {
+                        console.warn(`⚠️ PDF too large (${fileBuffer.length} bytes) — skipping base64 OCR, using subject-based fallback.`);
+                    }
                 } catch (err) {
                     console.error('Failed to read PDF for base64:', err.message);
                 }
             }
         }
+
 
         // If no file uploaded or text extraction yielded almost nothing, AND we don't have a pdfBase64, use Gemini to generate a syllabus automatically
         const alphaOnlyText = textContent.replace(/[^a-zA-Z]/g, '').trim();
