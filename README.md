@@ -10,7 +10,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-6+-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
 [![License](https://img.shields.io/badge/License-Academic-blue?style=for-the-badge)](./LICENSE)
 
-**[📺 Demo Video](#) · [🚀 Live Demo](#) · [📖 Full Docs](./GUIDE.md)**
+**[📺 Demo Video](#) · [🚀 Live Demo](qnario.vercel.app) · [📖 Full Docs](./GUIDE.md)**
 
 ---
 
