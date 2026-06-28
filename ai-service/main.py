@@ -191,9 +191,7 @@ async def quota_status():
 async def extract_syllabus(payload: SyllabusRequest):
     """Scans raw syllabus documents and extracts structured JSON chapters."""
     try:
-        text = payload.text.strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="No syllabus content provided.")
+        text = payload.text.strip() if payload.text else ""
         
         result = ai_generator.extract_syllabus_topics(text, payload.subject, payload.pdfBase64)
         
@@ -203,10 +201,16 @@ async def extract_syllabus(payload: SyllabusRequest):
             
         if result.get('success'):
             return result
-        raise HTTPException(status_code=500, detail=result.get('error', 'Syllabus scan failed.'))
+        
+        # Return a proper JSON error body with 'error' key so the Node.js
+        # backend and frontend error helpers can read the message correctly.
+        error_msg = result.get('error', 'Syllabus scan failed.')
+        logger.error(f"❌ [Syllabus Scan Failed]: {error_msg}")
+        return JSONResponse(status_code=500, content={"success": False, "error": error_msg})
     except Exception as e:
         logger.error(f"❌ [Syllabus Parse Error]: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 
 
 @app.post("/api/generate-insights")

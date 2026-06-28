@@ -744,8 +744,15 @@ const uploadSyllabus = async (req, res) => {
 
         return res.json({ success: true, syllabusId: id, extracted, useRAG: record.useRAG });
     } catch (error) {
-        console.error('Syllabus upload controller failure:', error.message);
-        return res.status(500).json({ success: false, error: error.message });
+        // Extract the actual error from the AI service response body if available.
+        // Axios wraps HTTP errors — error.message is just "Request failed with status 500".
+        // The real error is in error.response.data.error (from our AI service JSON body).
+        const actualError = error.response?.data?.error 
+            || error.response?.data?.detail 
+            || error.message 
+            || 'Syllabus scan failed.';
+        console.error('Syllabus upload controller failure:', actualError);
+        return res.status(500).json({ success: false, error: actualError });
     }
 };
 

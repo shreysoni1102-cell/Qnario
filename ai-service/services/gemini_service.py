@@ -137,11 +137,14 @@ class GeminiQuestionGenerator:
                 logger.error(f"Gemini Exception on attempt {attempt + 1}: {str(e)}")
                 break
 
-        # Fallback to Groq
+        # For multimodal (PDF/image): return failure so the CALLER handles fallback properly.
+        # Groq cannot OCR images — calling it here produces garbage JSON that causes 500 errors.
         if is_multimodal:
-            logger.warning("Gemini failed for PDF/image. Groq fallback cannot OCR — topics may be incomplete.")
-        else:
-            logger.warning("Gemini failed all attempts. Falling back to Groq...")
+            logger.warning("Gemini failed for PDF/image. Returning failure so caller can run smart Groq fallback.")
+            return {"success": False, "error": "Gemini quota exceeded for multimodal request"}
+
+        # Text-only: fall back to Groq
+        logger.warning("Gemini failed all attempts. Falling back to Groq...")
         return self._chat_groq(get_text_prompt(prompt), max_tokens)
 
     _TOKENS_PER_QUESTION = {
@@ -581,9 +584,11 @@ REMINDER: Copy unit names VERBATIM from the document. Do not invent, rename, or 
 
         result = self._chat(prompt, max_tokens=4096, temperature=0.1)
 
-        # If Gemini failed for a scanned PDF (image_parts), Groq received no visual content
-        # and would guess random topics. Use a subject-based generation prompt instead.
-        if not result["success"] and image_parts and subject_hint:
+        # If Gemini failed for a scanned PDF, Groq cannot read images/PDFs.
+        # Use a subject-based generation prompt so the user gets relevant topics.
+        # Trigger when: (a) image_parts was used (JPEG images), OR (b) the original input was a PDF
+        was_pdf_input = bool(image_parts) or bool(pdf_base64)  # either JPEG images or raw PDF base64
+        if not result["success"] and was_pdf_input and subject_hint:
             logger.warning(f"Gemini failed for scanned PDF. Running Groq subject-based generation for '{subject_hint}'...")
             # Use a concrete example so Groq does NOT return placeholder text
             groq_fallback_prompt = f"""You are an expert academic curriculum designer. Generate a real university syllabus.
