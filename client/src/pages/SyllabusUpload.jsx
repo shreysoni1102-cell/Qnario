@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { syllabusAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { getErrorMessage } from '../utils/errorHelpers';
+import { getSyllabusErrorMessage } from '../utils/errorHelpers';
 import { 
     Upload, FileText, Settings, Sparkles, CheckCircle2, 
     ArrowLeft, ArrowRight, Plus, Trash2, Edit3, Save, AlertTriangle,
@@ -109,7 +109,7 @@ const SyllabusUpload = () => {
                 setStep(2);
             }
         } catch (err) {
-            setErrorMsg(getErrorMessage(err));
+            setErrorMsg(getSyllabusErrorMessage(err));
         } finally {
             setIsScanning(false);
         }
@@ -376,8 +376,18 @@ const SyllabusUpload = () => {
 
             {/* Notifications Display */}
             {errorMsg && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '14px', borderRadius: '12px', fontSize: '0.85rem', color: '#f87171', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <AlertTriangle size={20} /> {errorMsg}
+                <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '16px 18px', borderRadius: '12px', fontSize: '0.88rem', color: '#f87171', marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '600', marginBottom: '8px' }}>Scan Failed</div>
+                        <div style={{ lineHeight: '1.5' }}>{errorMsg}</div>
+                        <button
+                            onClick={() => { setErrorMsg(''); setStep(1); }}
+                            style={{ marginTop: '12px', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '600' }}
+                        >
+                            🔄 Try Again
+                        </button>
+                    </div>
                 </div>
             )}
             {successMsg && (
