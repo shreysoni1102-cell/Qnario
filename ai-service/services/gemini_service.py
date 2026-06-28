@@ -39,7 +39,6 @@ class GeminiQuestionGenerator:
         if not self.groq_key:
             return {"success": False, "error": "GROQ_API_KEY is missing"}
         
-        groq_max = min(max_tokens, 8000)  # Groq supports up to 8192; raised from 2048 so full multi-unit syllabi fit in response
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.groq_key}",
@@ -47,26 +46,51 @@ class GeminiQuestionGenerator:
         }
         # Try multiple Groq models in order
         for groq_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
-            payload = {
-                "model": groq_model,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": groq_max,
-                "temperature": 0.7
-            }
-            try:
-                response = requests.post(url, headers=headers, json=payload, timeout=30)
-                logger.info(f"Groq [{groq_model}] status: {response.status_code}")
-                if response.status_code == 200:
-                    content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-                    logger.info(f"Groq success with model: {groq_model}")
-                    return {"success": True, "content": content}
-                else:
-                    logger.warning(f"Groq [{groq_model}] failed: {response.text[:200]}")
-                    continue
-            except Exception as e:
-                logger.error(f"Groq [{groq_model}] exception: {str(e)}")
-                continue
+            # Set model-specific max tokens cap to prevent TPM limit errors
+            # llama-3.3-70b-versatile TPM limit is 12000
+            # llama-3.1-8b-instant TPM limit is 6000
+            model_max_tpm = 12000 if "3.3-70b" in groq_model else 6000
+            
+            # Start with a conservative token allocation or caller request
+            current_max_tokens = min(max_tokens, 4096 if model_max_tpm == 12000 else 2048)
+            
+            # Up to 2 retries per model with reduced token limits if TPM limits hit
+            for attempt in range(2):
+                payload = {
+                    "model": groq_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": current_max_tokens,
+                    "temperature": 0.7
+                }
+                try:
+                    response = requests.post(url, headers=headers, json=payload, timeout=30)
+                    logger.info(f"Groq [{groq_model}] status: {response.status_code} (max_tokens: {current_max_tokens})")
+                    
+                    if response.status_code == 200:
+                        content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                        logger.info(f"Groq success with model: {groq_model}")
+                        return {"success": True, "content": content}
+                    
+                    # If rate limited (429) or request/tokens too large (413 or 400 with TPM error)
+                    is_tpm_error = False
+                    resp_text = response.text
+                    if response.status_code in [429, 413]:
+                        is_tpm_error = True
+                    elif response.status_code == 400 and ("rate limit" in resp_text.lower() or "tpm" in resp_text.lower() or "token" in resp_text.lower()):
+                        is_tpm_error = True
+                        
+                    if is_tpm_error and attempt == 0:
+                        logger.warning(f"Groq [{groq_model}] hit token/rate limit: {resp_text[:150]}. Retrying with halved max_tokens...")
+                        current_max_tokens = max(512, current_max_tokens // 2)
+                        continue
+                    else:
+                        logger.warning(f"Groq [{groq_model}] failed permanently: {resp_text[:200]}")
+                        break
+                except Exception as e:
+                    logger.error(f"Groq [{groq_model}] exception: {str(e)}")
+                    break
         return {"success": False, "error": "All Groq models failed"}
+
 
     def _chat(self, prompt: Any, max_tokens: int = 2048, temperature: float = 0.7) -> Dict[str, Any]:
         # Try Gemini first, fallback to Groq if 404 or missing
