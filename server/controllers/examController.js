@@ -3,7 +3,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const mammoth = require('mammoth');
-const pdfModule = require('pdf-parse');
+const pdfParse = require('pdf-parse');
 
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
@@ -643,24 +643,16 @@ const uploadSyllabus = async (req, res) => {
                 const result = await mammoth.extractRawText({ path: filePath });
                 textContent = result.value;
             } 
-            // PDF extraction
+            // PDF extraction (pdf-parse v1.1.1 — exports a simple async function)
             else if (mimeType === 'application/pdf') {
                 try {
-                    const pdfModule = require('pdf-parse');
                     const dataBuffer = fs.readFileSync(filePath);
-                    if (typeof pdfModule === 'function') {
-                        const pdfData = await pdfModule(dataBuffer);
-                        textContent = pdfData?.text || '';
-                    } else if (pdfModule?.PDFParse) {
-                        const parser = new pdfModule.PDFParse({ data: dataBuffer });
-                        const result = await parser.getText();
-                        textContent = result?.text || '';
-                        if (typeof parser.destroy === 'function') {
-                            await parser.destroy();
-                        }
-                    }
+                    const pdfData = await pdfParse(dataBuffer);
+                    textContent = pdfData?.text || '';
+                    console.log(`📄 PDF text extracted: ${textContent.length} chars`);
                 } catch (pdfErr) {
-                    console.error('PDF extraction failed:', pdfErr);
+                    console.error('PDF extraction failed:', pdfErr.message);
+                    // textContent stays '', OCR fallback below will kick in
                 }
             } 
             // Image extraction fallback
