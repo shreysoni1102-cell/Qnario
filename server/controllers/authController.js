@@ -176,9 +176,9 @@ const login = async (req, res) => {
             return res.status(403).json({ message: `This login is for ${expectedRole} accounts only. Please use the correct portal for your account type.` });
         }
 
-        // Track user login timestamps
-        user.lastLoginAt = new Date();
-        await user.save();
+        // Track user login timestamps — use updateOne to avoid triggering
+        // the pre('save') bcrypt hook which would double-hash the password.
+        await User.updateOne({ _id: user._id }, { lastLoginAt: new Date() });
 
         const token = generateToken(user);
 
