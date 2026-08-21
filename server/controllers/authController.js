@@ -153,13 +153,14 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password, expectedRole } = req.body;
-        console.log(`🔍 [DEBUG] Login attempt: email="${email}" | origin="${req.headers.origin}" | ip="${req.ip}"`);
+        const normalizedEmail = email ? String(email).trim().toLowerCase() : '';
+        console.log(`🔍 [DEBUG] Login attempt: email="${normalizedEmail}" | origin="${req.headers.origin}" | ip="${req.ip}"`);
 
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ message: 'Email and password are required.' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         console.log(`🔍 [DEBUG] User found: ${user ? `YES (${user.email})` : 'NO - not in DB'}`);
         if (!user) {
             return res.status(401).json({ message: 'Invalid email or password.' });

@@ -78,13 +78,14 @@ const Login = () => {
         setInfoMsg('');
         setLoading(true);
 
-        const res = await sendSignupOTP(name, email, password, role);
+        const cleanEmail = email ? email.trim().toLowerCase() : '';
+        const res = await sendSignupOTP(name, cleanEmail, password, role);
         setLoading(false);
 
         if (res.success) {
             setOtpSent(true);
             startOtpTimer();
-            setInfoMsg(`A 6-digit code has been sent to ${email}`);
+            setInfoMsg(`A 6-digit code has been sent to ${cleanEmail}`);
         } else {
             setErrorMsg(res.error || 'Failed to send verification code.');
         }
@@ -99,7 +100,8 @@ const Login = () => {
             return;
         }
         setLoading(true);
-        const res = await signup(name, email, password, role, otp);
+        const cleanEmail = email ? email.trim().toLowerCase() : '';
+        const res = await signup(name, cleanEmail, password, role, otp);
         setLoading(false);
 
         if (res.success) {
@@ -116,7 +118,8 @@ const Login = () => {
         e.preventDefault();
         setErrorMsg('');
         setLoading(true);
-        const res = await login(email, password, role);
+        const cleanEmail = email ? email.trim().toLowerCase() : '';
+        const res = await login(cleanEmail, password, role);
         setLoading(false);
         if (res.success) {
             if (res.user.role === 'admin') navigate('/admin/dashboard');
