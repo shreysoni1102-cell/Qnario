@@ -151,7 +151,7 @@ const Login = () => {
         <div className="main-wrapper">
             <div className="brand-header fade-in">
                 <h1 className="brand-title" style={{ fontSize: '2.5rem', cursor: 'pointer' }} onClick={() => navigate('/')}>Qnario</h1>
-                <p className="brand-subtitle">{role === 'teacher' ? 'Teacher Portal' : 'Student Center'}</p>
+                <p className="brand-subtitle">{role === 'teacher' ? 'Teacher Portal' : role === 'admin' ? 'Admin Portal' : 'Student Center'}</p>
             </div>
 
             <div className="glass-container fade-in" style={{ animationDelay: '0.1s' }}>
@@ -183,8 +183,44 @@ const Login = () => {
                 {/* ===== LOGIN FORM ===== */}
                 {!isSignup && (
                     <form onSubmit={handleLogin}>
+                        {/* Role Selection for Login */}
+                        <div className="form-group">
+                            <label className="form-label">Portal Role</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', background: 'rgba(0, 0, 0, 0.25)', padding: '5px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                                {[
+                                    { val: 'student', label: 'Student', Icon: GraduationCap },
+                                    { val: 'teacher', label: 'Teacher', Icon: BookOpen },
+                                    { val: 'admin', label: 'Admin', Icon: Lock }
+                                ].map(({ val, label, Icon }) => (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => setRole(val)}
+                                        style={{
+                                            padding: '8px 4px',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            background: role === val ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+                                            color: 'white',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '4px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <Icon size={14} /> {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="form-group">
                             <label className="form-label">Email Address</label>
+
                             <div style={{ position: 'relative' }}>
                                 <span style={{ position: 'absolute', left: '16px', top: '15px', color: 'var(--text-muted)' }}><Mail size={18} /></span>
                                 <input
